@@ -568,6 +568,9 @@ class PushInstallTestCase(QuiltTestCase):
                 assert url.path == '/%s/objs/test_user/%s' % (
                     app.config['PACKAGE_BUCKET_NAME'], obj_hash
                 )
+                if method == 'put':
+                    query = urllib.parse.parse_qs(url.query)
+                    assert query['x-amz-content-sha256'] == [obj_hash]
 
         # Verify that it doesn't actually exist.
         resp = self.app.get(
