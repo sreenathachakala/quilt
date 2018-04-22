@@ -555,22 +555,21 @@ def build_from_node(package, node):
     package_obj = store.create_package(team, owner, pkg)
 
     def _process_node(node, path=[]):
+        custom_meta = node._meta.get('custom')
         if isinstance(node, nodes.GroupNode):
-            package_obj.save_group(path)
+            package_obj.save_group(path, custom_meta)
             for key, child in node._items():
                 _process_node(child, path + [key])
         elif isinstance(node, nodes.DataNode):
-            core_node = node._node
-            metadata = core_node.metadata or {}
-            if isinstance(core_node, TableNode):
-                dataframe = node._data()
-                package_obj.save_df(dataframe, path, metadata.get('q_path'), metadata.get('q_ext'),
-                                    TargetType.PANDAS)
-            elif isinstance(core_node, FileNode):
-                src_path = node._data()
-                package_obj.save_file(src_path, path, metadata.get('q_path'), TargetType.FILE)
+            # TODO: If it's a nodes.SerializedDataNode, reuse the existing hashes.
+            data = node._data()
+            filepath = node._meta.get('filepath')
+            if isinstance(data, pd.DataFrame):
+                package_obj.save_df(data, path, TargetType.PANDAS, filepath, custom_meta)
+            elif isinstance(data, string_types):
+                package_obj.save_file(data, path, TargetType.FILE, filepath, custom_meta)
             else:
-                assert False, "Unexpected core node type: %r" % core_node
+                assert False, "Unexpected data type: %r" % data
         else:
             assert False, "Unexpected node type: %r" % node
 
