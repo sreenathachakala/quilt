@@ -1,6 +1,7 @@
 """
 Nodes that represent the data in a Quilt package.
 """
+import copy
 import os
 
 import pandas as pd
@@ -120,7 +121,7 @@ class GroupNode(Node):
         return [name for name in self.__dict__ if not name.startswith('_')]
 
     def _add_group(self, groupname):
-        child = GroupNode(None, None, {'custom': None})
+        child = GroupNode(None, None, {'custom': {}})
         setattr(self, groupname, child)
 
     def _data(self):
@@ -133,13 +134,47 @@ class GroupNode(Node):
         # XXX: This is wrong! The group could've been modified after the package was loaded.
         return self._package.get_obj(self._node)
 
+
+def _create_filter_func(filter_dict):
+    filter_name = filter_dict.pop('name', None)
+    if filter_name is not None and not isinstance(filter_name, string_types):
+        raise ValueError("Invalid 'name'")
+
+    filter_meta = filter_dict.pop('meta', None)
+    if filter_meta is not None and not isinstance(filter_meta, dict):
+        raise ValueError("Invalid 'meta'")
+
+    if filter_dict:
+        raise ValueError("Unexpected data in the filter: %r" % filter_dict)
+
+    def helper(value, expected):
+        if isinstance(expected, dict):
+            if isinstance(value, dict):
+                for expected_key, expected_value in iteritems(expected):
+                    if not helper(value.get(expected_key), expected_value):
+                        return False
+                return True
+            else:
+                return False
+        else:
+            return value == expected
+
+    def func(node, name):
+        if filter_name is not None and filter_name != name:
+            return False
+        if filter_meta is not None and not helper(node._meta, filter_meta):
+            return False
+        return True
+
+    return func
+
 class PackageNode(GroupNode):
     """
     Represents a package.
     """
 
     def _class_repr(self):
-        finfo = self._package.get_path()
+        finfo = self._package.get_path() if self._package is not None else ''
         return "<%s %r>" % (self.__class__.__name__, finfo)
 
     def _set(self, path, value, build_dir=''):
@@ -198,3 +233,35 @@ class PackageNode(GroupNode):
         key = path[-1]
         data_node = InMemoryDataNode(value, metadata)
         setattr(node, key, data_node)
+
+    def _filter(self, lambda_or_dict):
+        if isinstance(lambda_or_dict, dict):
+            func = _create_filter_func(lambda_or_dict)
+        elif callable(lambda_or_dict):
+            func = lambda_or_dict
+        else:
+            raise ValueError
+
+        def _filter_node(name, node, func):
+            matched = node != self and func(node, name)  # Don't filter the package node itself.
+            if isinstance(node, GroupNode):
+                filtered = type(node)(None, None, copy.deepcopy(node._meta))
+                for child_name, child_node in node._items():
+                    # If the group itself matched, then match all children by using a True filter.
+                    child_func = (lambda *args: True) if matched else func
+                    filtered_child = _filter_node(child_name, child_node, child_func)
+                    if filtered_child is not None:
+                        setattr(filtered, child_name, filtered_child)
+
+                # Return the group if:
+                # 1) It has children, or
+                # 2) Group itself matched the filter, or
+                # 3) It's the package itself.
+                if matched or next(filtered._items(), None) or node == self:
+                    return filtered
+            else:
+                if matched:
+                    return node
+            return None
+
+        return _filter_node('', self, func)

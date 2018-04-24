@@ -44,12 +44,12 @@ def _from_core_node(package, core_node):
         # Convert to the new-style metadata.
         metadata = {
             'filepath': core_node.metadata.get('filepath', core_node.metadata.get('q_path')),
-            'custom': core_node.metadata.get('custom')
+            'custom': core_node.metadata.get('custom') or {}
         }
         node = SerializedDataNode(package, core_node, metadata)
     else:
         metadata = {
-            'custom': core_node.metadata.get('custom')
+            'custom': core_node.metadata.get('custom') or {}
         }
         if isinstance(core_node, core.RootNode):
             node = PackageNode(package, core_node, metadata)
