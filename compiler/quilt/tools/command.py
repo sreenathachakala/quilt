@@ -555,7 +555,8 @@ def build_from_node(package, node):
     package_obj = store.create_package(team, owner, pkg)
 
     def _process_node(node, path=[]):
-        custom_meta = node._meta.get('custom')
+        meta = node._meta
+        custom_meta = meta.get('custom')
         if isinstance(node, nodes.GroupNode):
             package_obj.save_group(path, custom_meta)
             for key, child in node._items():
@@ -563,11 +564,12 @@ def build_from_node(package, node):
         elif isinstance(node, nodes.DataNode):
             # TODO: If it's a nodes.SerializedDataNode, reuse the existing hashes.
             data = node._data()
-            filepath = node._meta.get('filepath')
+            filepath = meta.get('filepath')
+            transform = meta.get('transform')
             if isinstance(data, pd.DataFrame):
-                package_obj.save_df(data, path, TargetType.PANDAS, filepath, custom_meta)
+                package_obj.save_df(data, path, TargetType.PANDAS, filepath, transform, custom_meta)
             elif isinstance(data, string_types):
-                package_obj.save_file(data, path, TargetType.FILE, filepath, custom_meta)
+                package_obj.save_file(data, path, TargetType.FILE, filepath, transform, custom_meta)
             else:
                 assert False, "Unexpected data type: %r" % data
         else:
@@ -1304,23 +1306,23 @@ def export(package, output_path='.', force=False):
 
     # Perhaps better as Node.export_path
     def get_export_path(node, node_path):
-        # If q_path is not present, generate fake path based on node parentage.
-        q_path = node._node.metadata.get('q_path')
-        if not q_path:
+        # If filepath is not present, generate fake path based on node parentage.
+        filepath = node._meta.get('filepath')
+        if not filepath:
             assert isinstance(node_path, pathlib.PureWindowsPath)
             assert not node_path.anchor
             print("Warning:  Missing export path in metadata.  Using node path: {}"
                   .format('/'.join(node_path.parts)))
             return node_path
 
-        # q_path is present.
-        dest = pathlib.PureWindowsPath(q_path)  # PureWindowsPath handles both windows and linux separators
+        # filepath is present.
+        dest = pathlib.PureWindowsPath(filepath)  # PureWindowsPath handles both windows and linux separators
 
-        # if q_path isn't absolute
+        # if filepath isn't absolute
         if not dest.anchor:
             return pathlib.Path(*dest.parts)  # return a native path
 
-        # q_path is absolute.
+        # filepath is absolute.
         dest = pathlib.Path(*dest.parts[1:])  # Issue warning as native path, and return it
         print("Warning:  Converted export path to relative path: {}".format(str(dest)))
         return dest
@@ -1345,24 +1347,26 @@ def export(package, output_path='.', force=False):
     def export_node(node, dest):
         if not dest.parent.exists():
             dest.parent.mkdir(parents=True, exist_ok=True)
-        if isinstance(node._node, FileNode):
-            copy(node(), str(dest))
-        elif isinstance(node._node, TableNode):
-            target = node._node.metadata['q_target']
-            ext = node._node.metadata['q_ext']
-            df = node()
-            if ext in ['xlsx', 'xls']:
+        data = node()
+        if isinstance(data, string_types):
+            copy(data, str(dest))
+        elif isinstance(data, pd.DataFrame):
+            transform = node._meta.get('transform')
+            if transform in ['xlsx', 'xls']:
                 try:
-                    df.to_excel(str(dest))
+                    print(dest)
+                    data.to_excel(str(dest))
                 except ImportError as error:
                     raise CommandException(error.args[0])
             # 100 decimal places of pi will allow you to draw a circle the size of the known
             # universe, and only vary by approximately the width of a proton.
             # ..so, hopefully 78 decimal places (256 bits) is ok for float precision in CSV exports.
             # If not, and someone complains, we can up it or add a parameter.
-            elif ext in ('csv', 'tsv', 'ssv'):
-                sep = {'csv': ',', 'tsv': '\t', 'ssv': ';'}[ext]
-                df.to_csv(str(dest), index=False, float_format='%78g', sep=sep)
+            elif transform in ('csv', 'tsv', 'ssv'):
+                sep = {'csv': ',', 'tsv': '\t', 'ssv': ';'}[transform]
+                data.to_csv(str(dest), index=False, float_format='%78g', sep=sep)
+            else:
+                raise CommandException("Unknown transform: %r" % transform)
 
     def resolve_dirpath(dirpath):
         """Checks the dirpath and ensures it exists and is writable

@@ -201,15 +201,14 @@ class PackageNode(GroupNode):
 
         if isinstance(value, pd.DataFrame):
             # all we really know at this point is that it's a pandas dataframe.
-            metadata = {'q_target': 'pandas'}
+            metadata = {}
         elif isinstance(value, string_types + (bytes,)):
             # bytes -> string for consistency when retrieving metadata
             value = value.decode() if isinstance(value, bytes) else value
             if os.path.isabs(value):
                 raise ValueError("Invalid path: expected a relative path, but received {!r}".format(value))
-            # q_ext blank, as it's for formats loaded as DataFrames, and the path is stored anyways.
-            # Security: q_path does not and should not retain the build_dir's location!
-            metadata = {'q_path': value, 'q_target': 'file', 'q_ext': ''}
+            # Security: filepath does not and should not retain the build_dir's location!
+            metadata = {'filepath': value, 'transform': 'id'}
             if build_dir:
                 value = os.path.join(build_dir, value)
         else:

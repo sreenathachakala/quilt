@@ -200,13 +200,13 @@ class Package(object):
                 raise PackageException("Attempting to overwrite root node of a non-empty package.")
             contents.children = pkgnode.children.copy()
 
-    def save_cached_df(self, hashes, node_path, target, source_path, custom_meta):
+    def save_cached_df(self, hashes, node_path, target, source_path, transform, custom_meta):
         """
         Save a DataFrame to the store.
         """
-        self._add_to_contents(node_path, hashes, target, source_path, custom_meta)
+        self._add_to_contents(node_path, hashes, target, source_path, transform, custom_meta)
 
-    def save_df(self, dataframe, node_path, target, source_path, custom_meta):
+    def save_df(self, dataframe, node_path, target, source_path, transform, custom_meta):
         """
         Save a DataFrame to the store.
         """
@@ -236,21 +236,21 @@ class Package(object):
                 objhash = digest_file(path)
                 move(path, self._store.object_path(objhash))
                 hashes.append(objhash)
-            self._add_to_contents(node_path, hashes, target, source_path, custom_meta)
+            self._add_to_contents(node_path, hashes, target, source_path, transform, custom_meta)
             rmtree(storepath)
             return hashes
         else:
             filehash = digest_file(storepath)
-            self._add_to_contents(node_path, [filehash], target, source_path, custom_meta)
+            self._add_to_contents(node_path, [filehash], target, source_path, transform, custom_meta)
             move(storepath, self._store.object_path(filehash))
             return [filehash]
 
-    def save_file(self, srcfile, node_path, target, source_path, custom_meta):
+    def save_file(self, srcfile, node_path, target, source_path, transform, custom_meta):
         """
         Save a (raw) file to the store.
         """
         filehash = digest_file(srcfile)
-        self._add_to_contents(node_path, [filehash], target, source_path, custom_meta)
+        self._add_to_contents(node_path, [filehash], target, source_path, transform, custom_meta)
         objpath = self._store.object_path(filehash)
         if not os.path.exists(objpath):
             # Copy the file to a temporary location first, then move, to make sure we don't end up with
@@ -263,7 +263,7 @@ class Package(object):
         """
         Save a group to the store.
         """
-        self._add_to_contents(node_path, None, TargetType.GROUP, None, custom_meta)
+        self._add_to_contents(node_path, None, TargetType.GROUP, None, None, custom_meta)
 
     def get_contents(self):
         """
@@ -333,7 +333,7 @@ class Package(object):
         """
         return self._store
 
-    def _add_to_contents(self, node_path, hashes, target, source_path, custom_meta):
+    def _add_to_contents(self, node_path, hashes, target, source_path, transform, custom_meta):
         """
         Adds an object (name-hash mapping) or group to package contents.
         """
@@ -342,10 +342,13 @@ class Package(object):
         contents = self.get_contents()
 
         metadata = {
-            'custom': custom_meta
+            'custom': custom_meta or {}
         }
         if target is not TargetType.GROUP:
-            metadata['filepath'] = source_path
+            metadata.update({
+                'filepath': source_path,
+                'transform': transform
+            })
 
         if not node_path:
             # Allow setting metadata on the root node, but that's it.
