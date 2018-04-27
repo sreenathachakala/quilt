@@ -301,17 +301,19 @@ class Package(object):
         package tree.
         """
         if isinstance(node, TableNode):
-            self._check_hashes(node.hashes)
+            hashes = node.str_hashes
+            self._check_hashes(hashes)
             if node.format is PackageFormat.HDF5:
                 raise PackageException("HDF5 format is no longer supported")
-            return self._dataframe(node.hashes)
+            return self._dataframe(hashes)
         elif isinstance(node, GroupNode):
-            hash_list = list(find_object_hashes(node, sort=True))
+            hash_list = find_object_hashes(node, sort=True)
             self._check_hashes(hash_list)
             return self._dataframe(hash_list)
         elif isinstance(node, FileNode):
-            self._check_hashes(node.hashes)
-            return self.file(node.hashes)
+            hashes = node.str_hashes
+            self._check_hashes(hashes)
+            return self.file(hashes)
         else:
             assert False, "Unhandled Node {node}".format(node=node)
 

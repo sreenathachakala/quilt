@@ -14,6 +14,8 @@ class Node(object):
     """
     Abstract class that represents a group or a leaf node in a package.
     """
+    __slots__ = ['_meta']
+
     def __init__(self, meta):
         # Can't instantiate it directly
         assert self.__class__ != Node.__class__
@@ -40,12 +42,16 @@ class Node(object):
         raise NotImplementedError
 
 class DataNode(Node):
+    __slots__ = []
+
     pass
 
 class SerializedDataNode(DataNode):
     """
     Represents a dataframe or a file with data in the package store.
     """
+    __slots__ = ['_package', '_node', '__cached_data']
+
     def __init__(self, package, node, meta):
         super(SerializedDataNode, self).__init__(meta)
         assert package is not None
@@ -67,6 +73,8 @@ class InMemoryDataNode(DataNode):
     """
     Represents a newly-created dataframe or a file that's not backed by the package store.
     """
+    __slots__ = ['__data']
+
     def __init__(self, data, meta):
         super(InMemoryDataNode, self).__init__(meta)
         assert data is not None

@@ -962,7 +962,7 @@ def materialize(package):
         if isinstance(obj, nodes.GroupNode):
             stack.extend(child for name, child in obj._items())
         else:
-            hashes.update(obj._node.hashes)  # May be empty for nodes created locally
+            hashes.update(obj._node.str_hashes)  # May be empty for nodes created locally
 
     missing_hashes = {obj_hash for obj_hash in hashes if not os.path.exists(store.object_path(obj_hash))}
 
