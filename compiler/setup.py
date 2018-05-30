@@ -49,16 +49,7 @@ setup(
         'six>=1.10.0',
         'tqdm>=4.11.2',
         'xlrd>=1.0.0',
-    ],
-    extras_require={
-        # Use: pip install --editable ./[tests]
-        'tests': [
-            'funcsigs; python_version<"3.4"',   # stdlib backport
-            'mock; python_version<"3.3"',
-            'pytest',
-            'responses>=0.7.0',
-        ]
-    },
+    ],    
     include_package_data=True,
     entry_points={
         'console_scripts': ['quilt=quilt.tools.main:main'],
