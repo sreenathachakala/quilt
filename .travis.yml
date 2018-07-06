@@ -71,6 +71,8 @@ install:
       pwd
       cd catalog && npm ci
       pwd
+      cd ..
+      pwd
     fi
 
 script:
