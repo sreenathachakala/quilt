@@ -224,7 +224,7 @@ def download_fragments(store, obj_urls, obj_sizes):
                                        (obj_hash, file_hash))
                             continue
 
-                    local_filename = store.object_path(obj_hash)
+                    local_filename = store.get_file([obj_hash])
                     move(temp_path, local_filename)
 
                     # Success.
@@ -269,7 +269,7 @@ def upload_fragments(store, obj_urls, obj_sizes, reupload=False):
 
                     try:
                         if reupload or not s3_session.head(obj_urls['head']).ok:
-                            with FileWithReadProgress(store.object_path(obj_hash), progress.update) as fd:
+                            with FileWithReadProgress(store.get_file([obj_hash]), progress.update) as fd:
                                 url = obj_urls['put']
                                 # Work around a `requests` bug: it treats size 0 as "unknown" and
                                 # uses chunked encoding - which S3 doesn't support.

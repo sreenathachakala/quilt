@@ -242,13 +242,14 @@ def _build_node(build_dir, pkg_store, pkg_root, node_path, node, checks_contents
 
             ID = 'id' # pylint:disable=C0103
             PARQUET = 'parquet' # pylint:disable=C0103
+            REFERENCE = 'reference' # pylint:disable=C0103
             if transform:
                 transform = transform.lower()
                 if transform in PANDAS_PARSERS:
                     target = TargetType.PANDAS # pylint:disable=R0204
                 elif transform == PARQUET:
                     target = TargetType.PANDAS # pylint:disable=R0204
-                elif transform == ID:
+                elif transform == ID or transform == REFERENCE:
                     target = TargetType.FILE # pylint:disable=R0204
                 else:
                     raise BuildException("Unknown transform '%s' for %s" %
@@ -287,6 +288,21 @@ def _build_node(build_dir, pkg_store, pkg_root, node_path, node, checks_contents
                                                   rel_path,
                                                   transform,
                                                   metadata)
+            elif transform == REFERENCE:
+                #TODO move this to a separate function
+                if checks:
+                    with open(path, 'r') as fd:
+                        data = fd.read()
+                        _run_checks(data, checks, checks_contents, node_path, rel_path, target, env=env)
+                if not dry_run:
+                    print("Registering %s..." % path)
+                    pkg_store.add_to_package_reference(pkg_root,
+                                                       path,
+                                                       node_path,
+                                                       target,
+                                                       rel_path,
+                                                       transform,
+                                                       metadata)
             elif transform == PARQUET:
                 if checks:
                     from pyarrow.parquet import ParquetDataset

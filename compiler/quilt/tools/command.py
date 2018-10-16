@@ -715,7 +715,7 @@ def push(package, is_public=False, is_team=False, reupload=False):
     assert set(obj_urls) == set(find_object_hashes(contents))
 
     obj_sizes = {
-        obj_hash: os.path.getsize(store.object_path(obj_hash)) for obj_hash in obj_urls
+        obj_hash: os.path.getsize(store.get_file([obj_hash])) for obj_hash in obj_urls
     }
 
     success = upload_fragments(store, obj_urls, obj_sizes, reupload=reupload)

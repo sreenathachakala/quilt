@@ -53,6 +53,7 @@ class PackageStore(object):
     BUILD_DIR = 'build'
     OBJ_DIR = 'objs'
     TMP_OBJ_DIR = 'tmp'
+    REF_DIR = 'ref'
     PKG_DIR = 'pkgs'
     CACHE_DIR = 'cache'
     VERSION = '1.3'
@@ -350,6 +351,15 @@ class PackageStore(object):
         """
         return os.path.join(self._path, self.OBJ_DIR, objhash)
 
+    def reference_path(self, objhash):
+        """
+        Returns the path to an object file based on its hash.
+        """
+        ref_dir = os.path.join(self._path, self.REF_DIR) 
+        if not os.path.exists(ref_dir):
+            os.mkdir(ref_dir)
+        return os.path.join(ref_dir, objhash)
+    
     def temporary_object_path(self, name):
         """
         Returns the path to a temporary object, before we know its hash.
@@ -415,7 +425,9 @@ class PackageStore(object):
         for objhash in hash_list:
             path = self.object_path(objhash)
             if not os.path.exists(path):
-                raise StoreException("Missing object fragments; re-install the package")
+                ref_path = self.reference_path(objhash)
+                if not os.path.exists(ref_path):
+                    raise StoreException("Missing object fragments; re-install the package")
 
     def load_dataframe(self, hash_list):
         """
@@ -496,9 +508,15 @@ class PackageStore(object):
         """
         assert len(hash_list) == 1
         self._check_hashes(hash_list)
-        return self.object_path(hash_list[0])
+        obj_path = self.object_path(hash_list[0])
+        if os.path.exists(obj_path):
+            return obj_path
+        else:            
+            with open(self.reference_path(hash_list[0]), 'r') as ref_file:
+                ref_path = ref_file.read()
+                return ref_path
 
-    def save_file(self, srcfile):
+    def save_file(self, srcfile, reference=False):
         """
         Save a (raw) file to the store.
         """
@@ -506,9 +524,12 @@ class PackageStore(object):
         if not os.path.exists(self.object_path(filehash)):
             # Copy the file to a temporary location first, then move, to make sure we don't end up with
             # truncated contents if the build gets interrupted.
-            tmppath = self.temporary_object_path(filehash)
-            copyfile(srcfile, tmppath)
-            self._move_to_store(tmppath, filehash)
+            if reference:
+                self._add_reference(srcfile, filehash)
+            else:
+                tmppath = self.temporary_object_path(filehash)
+                copyfile(srcfile, tmppath)
+                self._move_to_store(tmppath, filehash)
 
         return filehash
 
@@ -581,6 +602,10 @@ class PackageStore(object):
         os.chmod(srcpath, S_IRUSR | S_IRGRP | S_IROTH)  # Make read-only
         move(srcpath, destpath)
 
+    def _add_reference(self, srcpath, objhash):
+        with open(self.reference_path(objhash), 'w') as ref_file:
+            ref_file.write(os.path.abspath(srcpath))
+
     def _add_to_package_contents(self, pkgroot, node_path, hashes, target,
                                  source_path, transform, user_meta_hash):
         """
@@ -652,6 +677,14 @@ class PackageStore(object):
         Save a (raw) file to the store.
         """
         filehash = self.save_file(srcfile)
+        metahash = self.save_metadata(custom_meta)
+        self._add_to_package_contents(root, node_path, [filehash], target, source_path, transform, metahash)
+
+    def add_to_package_reference(self, root, srcfile, node_path, target, source_path, transform, custom_meta):
+        """
+        Save a (raw) file to the store.
+        """
+        filehash = self.save_file(srcfile, reference=True)
         metahash = self.save_metadata(custom_meta)
         self._add_to_package_contents(root, node_path, [filehash], target, source_path, transform, metahash)
 
