@@ -1,5 +1,10 @@
 const feed = [
   {
+    name: 'census',
+    owner: 'knaaptime',
+    description: 'US Census Tract Polygons',
+  },
+  {
     name: 'vision_dot_2018',
     owner: 'evanvin',
     description: '2018 Department of Transportation Challenge Datasets',
