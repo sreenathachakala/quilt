@@ -109,8 +109,7 @@ function Pricing({ signUp, takeAction = true, title = 'Pricing' }) {
               • Up to 1TB of private packages<br />
             </td>
             <td>
-              • Unlimited public packages<br />
-              • 1TB and up of private packages<br />
+              • Unlimited data storage<br />
               • Admin and auditing features<br />
               • Dedicated web catalog<br />
             </td>
