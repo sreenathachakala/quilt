@@ -11,7 +11,7 @@ export default defineMessages({
   },
   header: {
     id: 'app.components.Feature.header',
-    defaultMessage: 'Manage data like code',
+    defaultMessage: 'Create a library of data',
   },
   primaryCall: {
     id: 'app.components.Feature.primaryCall',
