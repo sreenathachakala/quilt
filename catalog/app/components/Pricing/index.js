@@ -62,10 +62,6 @@ const Styler = styled.div`
   }
 `;
 
-const Detail = styled.p`
-  text-align: right;
-`;
-
 const perUser = <span className="unit">per user / month</span>;
 const perMonth = <span className="unit">per month</span>;
 
