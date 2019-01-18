@@ -37,6 +37,7 @@ const Styler = styled.div`
   }
 
   td {
+    font-size: .8em;
     border: 1px solid white;
     font-weight: lighter;
     padding: 16px;
@@ -66,6 +67,7 @@ const Detail = styled.p`
 `;
 
 const perUser = <span className="unit">per user / month</span>;
+const perMonth = <span className="unit">per month</span>;
 
 function Pricing({ signUp, takeAction = true, title = 'Pricing' }) {
   return (
@@ -77,6 +79,7 @@ function Pricing({ signUp, takeAction = true, title = 'Pricing' }) {
             <th>Free</th>
             <th>Individual</th>
             <th>Team</th>
+            <th>Enterprise</th>
           </tr>
           <tr className="price">
             <td>
@@ -86,7 +89,15 @@ function Pricing({ signUp, takeAction = true, title = 'Pricing' }) {
               <h2>$7 { perUser }</h2>
             </td>
             <td>
-              <h2>$49* { perUser }</h2>
+              <h2>$990 { perMonth }</h2>
+              <a href="https://aws.amazon.com/marketplace/pp/B07GDSGJ3S?qid=1547780653840">Buy now</a> on AWS Marketplace
+            </td>
+            <td>
+              <h2>
+                <a href={`mailto:sales@quiltdata.io?Subject=Quilt%20Enterprise&body=${emailBody}`} target="_top" >
+                  Contact us
+                </a>
+              </h2>
             </td>
           </tr>
           <tr>
@@ -100,20 +111,20 @@ function Pricing({ signUp, takeAction = true, title = 'Pricing' }) {
             <td>
               • Unlimited public packages<br />
               • 1TB and up of private packages<br />
-              • Priority support<br />
               • Admin and auditing features<br />
-              • Dedicated registry and web catalog, exclusive to your team<br />
+              • Dedicated web catalog<br />
+            </td>
+            <td>
+              • Unlimited data storage<br />
+              • Admin and auditing features<br />
+              • Dedicated web catalog<br />
+              • Priority support<br />
+              • Custom SSO (LDAP, Active Directory, etc.)
             </td>
           </tr>
         </tbody>
       </table>
-      <Detail>* Sold in packs of 10 users</Detail>
-      <p>
-        <a href={`mailto:sales@quiltdata.io?Subject=Quilt%20Teams&body=${emailBody}`} target="_top" >
-          Contact us
-        </a>
-        &nbsp;to start Team service.
-      </p>
+      <br />
       {takeAction ? <TakeAction signUp={signUp} /> : null}
     </Styler>
   );
