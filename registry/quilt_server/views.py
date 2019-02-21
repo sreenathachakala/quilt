@@ -88,14 +88,14 @@ MAX_PREVIEW_SIZE = 640 * 1024  # 640KB ought to be enough for anybody...
 s3_client = boto3.client(
     's3',
     endpoint_url=app.config.get('S3_ENDPOINT'),
-    aws_access_key_id=app.config.get('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=app.config.get('AWS_SECRET_ACCESS_KEY')
+    #aws_access_key_id=app.config.get('AWS_ACCESS_KEY_ID'),
+    #aws_secret_access_key=app.config.get('AWS_SECRET_ACCESS_KEY')
 )
 
 sts_client = boto3.client(
     'sts',
-    aws_access_key_id=app.config.get('AWS_ACCESS_KEY_ID'),
-    aws_secret_access_key=app.config.get('AWS_SECRET_ACCESS_KEY')
+    #aws_access_key_id=app.config.get('AWS_ACCESS_KEY_ID'),
+    #aws_secret_access_key=app.config.get('AWS_SECRET_ACCESS_KEY')
 )
 
 stripe.api_key = app.config['STRIPE_SECRET_KEY']
@@ -205,7 +205,11 @@ def register_marketplace_usage():
     marketplace_product_code = os.environ.get("MP_PRODUCT_CODE")
     marketplace_public_key_version = int(os.environ.get("MP_PUBLIC_KEY_VERSION"))
     aws_region=os.environ.get("AWS_REGION")
-    metering_client = client = boto3.client('meteringmarketplace', region_name=aws_region)
+    metering_client = client = boto3.client('meteringmarketplace',
+                                            region_name=aws_region,
+                                            #aws_access_key_id=app.config.get('AWS_ACCESS_KEY_ID'),
+                                            #aws_secret_access_key=app.config.get('AWS_SECRET_ACCESS_KEY')
+                                            )
     if marketplace_product_code is not None:
         metering_client.register_usage(
             ProductCode=marketplace_product_code,
