@@ -31,7 +31,7 @@ Used in conjunction with `quilt.asa.pytorch` to generate PyTorch datasets.
 
 #### Mac
 ```
-$ pip install quilt[img]==2.9.15[pytorch,torchvision]
+$ pip install quilt[pytorch,torchvision]==2.9.15
 ```
 
 #### Linux, Windows
