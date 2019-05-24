@@ -7,14 +7,14 @@
 
 ## Mac OS / Linux
 ```bash
-$ pip install quilt
+$ pip install quilt==2.9.15
 ```
 
 
 ## Windows
 Download and install [Visual C++ Redistributable for Visual Studio 2015](https://www.microsoft.com/en-us/download/details.aspx?id=48145).
 ```bash
-$ pip install quilt
+$ pip install quilt==2.9.15
 ```
 
 ## Install extras
@@ -23,7 +23,7 @@ $ pip install quilt
 Used by `quilt.asa.plot` to display images in Jupyter notebooks.
 
 ```
-$ pip install quilt[img]
+$ pip install quilt[img]==2.9.15
 ```
 
 ### [pytorch,torchvision]
@@ -31,7 +31,7 @@ Used in conjunction with `quilt.asa.pytorch` to generate PyTorch datasets.
 
 #### Mac
 ```
-$ pip install quilt[pytorch,torchvision]
+$ pip install quilt[img]==2.9.15[pytorch,torchvision]
 ```
 
 #### Linux, Windows
