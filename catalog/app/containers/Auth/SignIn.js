@@ -6,6 +6,7 @@ import { Redirect } from 'react-router-dom'
 import { branch, renderComponent } from 'recompose'
 import { reduxForm, Field, SubmissionError } from 'redux-form/immutable'
 import { createStructuredSelector } from 'reselect'
+import { GoogleLogin } from 'react-google-login'
 
 import * as Config from 'utils/Config'
 import * as NamedRoutes from 'utils/NamedRoutes'
@@ -56,7 +57,7 @@ export default composeComponent(
       return <Redirect to={query.next || cfg.signInRedirect} />
     }),
   ),
-  ({ handleSubmit, submitting, submitFailed, invalid, error }) => {
+  ({ handleSubmit, submitting, submitFailed, invalid, error, dispatch }) => {
     const cfg = Config.useConfig()
     const { urls } = NamedRoutes.use()
 
@@ -125,6 +126,18 @@ export default composeComponent(
             />
           </Layout.Hint>
         </form>
+        <GoogleLogin
+          clientId={cfg.googleClientId}
+          buttonText={<FM {...msg.signInWithGoogle} />}
+          onSuccess={(user) => {
+            const provider = 'google'
+            const token = user.getAuthResponse().id_token
+            dispatch(signIn({ provider, token }))
+          }}
+          onFailure={console.log}
+          cookiePolicy='single_host_origin'
+          disabled={submitting}
+        />
       </Container>
     )
   },
