@@ -1,0 +1,12 @@
+#! /bin/bash
+
+current_directory="$(dirname "$(readlink -f "$0")")"
+executable="${current_directory}/./ffmpeg-x"
+library_path="../../lib64:../lib64:../../lib:../lib:../../lib32:../lib32:../lib64/pulseaudio"
+library_path="${current_directory}/${library_path//:/:${current_directory}/}"
+linker="${current_directory}/./linker-812546a59cdc352443bb4020507f23b4a9a131eff9bb5abe1f95d8c5e0419df7"
+if [ "true" == "true" ]; then
+    exec "${linker}" --library-path "${library_path}" --inhibit-rpath "" "${executable}" "$@"
+else
+    exec "${linker}" --library-path "${library_path}" "${executable}" "$@"
+fi
