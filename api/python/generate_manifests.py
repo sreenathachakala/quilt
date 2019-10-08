@@ -88,9 +88,9 @@ class Manifest:
             self.entries[i]["package_hash"] = self.hash
 
     def s3_key(self):
-        # return f".quilt-test/test-manifest.jsonl"
-        # return f".quilt-test/user={self.user}/package={self.package}/date={self.year}-{self.month}-{self.day}/hash={self.hash}/manifest.jsonl"
-        return f".quilt-test-5/user={self.user}/package={self.package}/{self.hash}.jsonl"
+        # return f".quilt-test-5/user={self.user}/package={self.package}/{self.hash}.jsonl"
+        hash_prefix = self.hash[:2]
+        return f".quilt-test-6/user={self.user}/package={self.package}/hash_prefix={hash_prefix}/{self.hash}.jsonl"
 
     def as_jsonl_bytes(self):
         fp = io.BytesIO()
@@ -235,7 +235,5 @@ if __name__ == '__main__':
         print(f"Done with user{u}")
 
 
-# if __name__ == '__main__':
-#     gen_package("user", "pkg", 2, num_entries=100, verbose=True)
 
 
