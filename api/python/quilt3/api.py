@@ -141,6 +141,40 @@ def list_packages(registry=None):
 
     return packages
 
+def latest_package_version(package_name, registry=None):
+    """
+
+    :param package_name:
+    :param registry:
+    :return: tophash of the most recetly update version (for s3:// this is based on last_modified_time, for file://
+    from the timestamp in the manifest metadata )
+    """
+    if registry is None:
+        registry = get_from_config('default_local_registry')
+
+    registry = fix_url(registry)
+    packages_urlparse = urlparse(registry.rstrip('/') + f'/.quilt/packages/package={package_name}/')
+
+    if packages_urlparse.scheme == 'file':
+        raise NotImplementedError("Havent revisited this codepath since .quilt refactor")
+
+
+
+    elif packages_urlparse.scheme == 's3':
+        bucket_name, package_s3_prefix, _ = parse_s3_url(packages_urlparse)
+
+        most_recent_timestamp_found = None
+        most_recent_tophash_found = None
+
+        for manifest_obj in list_objects(bucket_name, package_s3_prefix):
+            manifest_tophash = manifest_obj['Key'].split("/")[-1].replace(".jsonl", "")
+            last_modified_time = manifest_obj['LastModified']
+
+            if most_recent_timestamp_found is None or last_modified_time > most_recent_timestamp_found:
+                most_recent_tophash_found = manifest_tophash
+
+    return most_recent_tophash_found
+
 
 def config(*catalog_url, **config_values):
     """Set or read the QUILT configuration.

@@ -1,5 +1,6 @@
 from collections import deque
 import copy
+import datetime
 import hashlib
 import io
 import json
@@ -12,6 +13,7 @@ import warnings
 
 import jsonlines
 
+from .api import latest_package_version
 from .data_transfer import (
     calculate_sha256, copy_file, copy_file_list, get_bytes, get_size_and_meta,
     list_object_versions, put_bytes
@@ -356,7 +358,7 @@ class Package(object):
                     f"'build' instead."
                 )
 
-        pkg = cls.browse(name=name, registry=registry, top_hash=top_hash)
+        pkg = cls.browse(package_name=name, registry=registry, top_hash=top_hash)
         dest = fix_url(dest)
         message = pkg._meta.get('message', None)  # propagate the package message
 
@@ -365,38 +367,35 @@ class Package(object):
         return pkg
 
     @classmethod
-    def browse(cls, name=None, registry=None, top_hash=None):
+    def browse(cls, package_name=None, registry=None, top_hash=None):
         """
         Load a package into memory from a registry without making a local copy of
         the manifest.
         Args:
-            name(string): name of package to load
+            package_name(string): name of package to load
             registry(string): location of registry to load package from
-            top_hash(string): top hash of package version to load
+            top_hash(string): top hash of package version to load. If the tophash is not specified, use newest manifest
         """
         if registry is None:
             registry = get_from_config('default_local_registry')
 
         registry = registry.rstrip('/')
-        validate_package_name(name)
-        name = quote(name)
+        validate_package_name(package_name)
+        package_name = quote(package_name)
 
-        if top_hash is not None:
-            # TODO: verify that name is correct with respect to this top_hash
-            # TODO: allow partial hashes (e.g. first six alphanumeric)
-            pkg_manifest_uri = fix_url(f'{registry}/.quilt/packages/{top_hash}')
-            return cls._from_path(pkg_manifest_uri)
-        else:
-            pkg_timestamp_file = f'{registry}/.quilt/named_packages/{name}/latest'
-            latest_pkg_hash, _ = get_bytes(pkg_timestamp_file)
-            latest_pkg_hash = latest_pkg_hash.decode('utf-8').strip()
-            pkg_manifest_uri = fix_url(f'{registry}/.quilt/packages/{quote(latest_pkg_hash)}')
-            return cls._from_path(pkg_manifest_uri)
+        if top_hash is None:
+            # TODO: Support tags
+            top_hash = latest_package_version(package_name, registry=registry)
+
+        pkg_manifest_uri = fix_url(f'{registry}/.quilt/packages/package={package_name}/hash_prefix={top_hash[:2]}/{top_hash}.jsonl')
+        return cls._from_path(pkg_manifest_uri)
+
+
 
 
     @classmethod
     def _from_path(cls, uri):
-        """ Takes a URI and returns a package loaded from that URI """
+        """ Takes a URI and returns a manifest loaded from that URI """
         src_url = urlparse(uri)
         if src_url.scheme == 'file':
             with open(parse_file_url(src_url)) as open_file:
@@ -789,18 +788,20 @@ class Package(object):
 
         self._meta.update({'message': msg})
 
-    def build(self, name=None, registry=None, message=None):
+    def build(self, package_name=None, registry=None, message=None):
         """
         Serializes this package to a registry.
 
         Args:
-            name: optional name for package
+            package_name: optional name for package
             registry: registry to build to
                     defaults to local registry
             message: the commit message of the package
 
         Returns:
-            The top hash as a string.
+            self.
+
+        # TODO: Add support for tags
         """
         self._set_commit_message(message)
 
@@ -808,26 +809,21 @@ class Package(object):
             registry = get_from_config('default_local_registry')
 
         registry = registry.rstrip('/')
-        validate_package_name(name)
-        name = quote(name)
+        validate_package_name(package_name)
+        package_name = quote(package_name)
 
         self._fix_sha256()
+        self.meta["timestamp"] = datetime.datetime.utcnow().isoformat()
         manifest = io.BytesIO()
         self.dump(manifest)
 
-        pkg_manifest_file = f'{registry}/.quilt/packages/{self.top_hash}'
+        pkg_manifest_file = f'{registry}/.quilt/packages/package={package_name}/hash_prefix={self.top_hash[:2]}/{self.top_hash}.jsonl'
         put_bytes(
             manifest.getvalue(),
             pkg_manifest_file
         )
 
-        named_path = f'{registry}/.quilt/named_packages/{name}/'
-        # TODO: use a float to string formater instead of double casting
-        hash_bytes = self.top_hash.encode('utf-8')
-        timestamp_path = named_path + str(int(time.time()))
-        latest_path = named_path + "latest"
-        put_bytes(hash_bytes, timestamp_path)
-        put_bytes(hash_bytes, latest_path)
+
 
         return self
 
