@@ -457,6 +457,41 @@ def delete_object(bucket, key):
         s3_client.delete_object(Bucket=bucket, Key=key)  # Actually delete it
 
 
+
+def batchify(list_to_batchify, batch_size=25):
+    batches = []
+    batch = []
+    batch_counter = 0
+    for item in list_to_batchify:
+        if batch_counter == batch_size:
+            batches.append(batch)
+            batch = []
+            batch_counter = 0
+        batch.append(item)
+        batch_counter += 1
+    if len(batch) > 0:
+        batches.append(batch)
+    return batches
+
+
+def single_batch_delete_objects(bucket, keys):
+    assert len(keys) <= 1000, "Cannot delete more than 1000 objects in a single API call"
+    client = create_s3_client()
+    delete_objs = [{'Key': k} for k in keys]
+    response = client.delete_objects(
+        Bucket=bucket,
+        Delete={
+            'Objects': delete_objs,
+            'Quiet': True
+        },
+    )
+
+
+def batch_delete_objects(bucket, keys):
+    batches = batchify(keys, batch_size=1000)
+    for batch in batches:
+        single_batch_delete_objects(bucket, batch)
+
 def list_object_versions(bucket, prefix, recursive=True):
     if prefix and not prefix.endswith('/'):
         raise ValueError("Prefix must end with /")

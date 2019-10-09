@@ -1,6 +1,6 @@
 ```
-/.quilt/packages/user=USER/package=PACKAGE/hash.jsonl
-/.quilt/tags/user=USER/package=PACKAGE/latest -> s3_key
+/.quilt/packages/package=PACKAGE/hash.jsonl
+/.quilt/tags/package=PACKAGE/latest -> s3_key
 ```
 
 - timestamp is stored in manifest metadata

@@ -21,7 +21,7 @@ BASE_PATH = pathlib.Path(BASE_DIR)
 CONFIG_PATH = BASE_PATH / 'config.yml'
 OPEN_DATA_URL = "https://open.quiltdata.com"
 
-PACKAGE_NAME_FORMAT = r"[\w-]+/[\w-]+$"
+PACKAGE_NAME_FORMAT = r"[\w-]+$"
 
 ## CONFIG_TEMPLATE
 # Must contain every permitted config key, as well as their default values (which can be 'null'/None).
