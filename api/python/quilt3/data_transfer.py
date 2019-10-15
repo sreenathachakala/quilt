@@ -353,11 +353,15 @@ def _copy_remote_file(size, src_bucket, src_key, src_version,
                     MultipartUpload={"Parts": parts}
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
+                return version_id
 
         for i, start in enumerate(chunk_offsets):
             end = min(start + s3_transfer_config.multipart_chunksize, size)
-            upload_part(i, start, end)
-
+            version_id = upload_part(i, start, end)
+    out = f"s3://{dest_bucket}/{dest_key}"
+    if version_id:
+        out += f"?versionId={version_id}"
+    return out
 
 def _upload_or_copy_file(s3_client, size, src_path, dest_bucket, dest_path, override_meta):
 
@@ -382,7 +386,7 @@ def _upload_or_copy_file(s3_client, size, src_path, dest_bucket, dest_path, over
                     if override_meta is None or override_meta == dest_meta:
                         # Nothing more to do. We should not attempt to copy the object because
                         # that would cause the "copy object to itself" error.
-                        pass
+                        return f"s3://{dest_bucket}/{dest_path}?versionId={dest_version_id}"
                     else:
                         # NOTE(dima): There is technically a race condition here: if the S3 file
                         # got modified after the `head_object` call AND we have no version ID,
@@ -390,11 +394,11 @@ def _upload_or_copy_file(s3_client, size, src_path, dest_bucket, dest_path, over
                         # for the user to perform such actions, but just in case, pass
                         # CopySourceIfMatch to make the request fail.
                         extra_args = dict(CopySourceIfMatch=src_etag)
-                        _copy_remote_file(
+                        return _copy_remote_file(
                             size, dest_bucket, dest_path, dest_version_id,
                             dest_bucket, dest_path, override_meta, extra_args
                         )
-                    return f"s3://{dest_bucket}/{dest_path}?versionId={dest_version_id}"
+
 
     # If the optimization didn't happen, do the normal upload.
     return _upload_file(size, src_path, dest_bucket, dest_path, override_meta)
