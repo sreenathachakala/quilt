@@ -421,6 +421,15 @@ class Package(object):
 
         return repr_str
 
+    def view(self, max_lines=100):
+        print(self.meta)
+        cnt = 0
+        for lk, entry in self.walk():
+            print(lk, entry.as_dict())
+            cnt += 1
+            if cnt > max_lines:
+                break
+
     @property
     def meta(self):
         return self._meta.get('user_meta', dict())
