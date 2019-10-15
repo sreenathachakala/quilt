@@ -63,7 +63,8 @@ s3_threads = 4
 
 # When uploading files at least this size, compare the ETags first and skip the upload if they're equal;
 # copy the remote file onto itself if the metadata changes.
-UPLOAD_ETAG_OPTIMIZATION_THRESHOLD = 1024
+# UPLOAD_ETAG_OPTIMIZATION_THRESHOLD = 1024
+UPLOAD_ETAG_OPTIMIZATION_THRESHOLD = 1
 
 
 def _parse_metadata(resp):
