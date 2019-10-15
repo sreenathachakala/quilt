@@ -1275,7 +1275,7 @@ class Package(object):
         for logical_key, entry in self.walk():
             # Copy the datafiles in the package.
             physical_key = _to_singleton(entry.physical_keys)
-            new_physical_key = dest_url + "/" + quote(logical_key)
+            new_physical_key = dest_url.rstrip("/") + "/" + quote(logical_key)
             file_list.append((physical_key, new_physical_key, entry.size, entry.meta))
         print("entering copy_file_list")
         results = copy_file_list(file_list)
