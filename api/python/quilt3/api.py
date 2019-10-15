@@ -8,6 +8,7 @@ from .util import (QuiltConfig, QuiltException, CONFIG_PATH,
                    CONFIG_TEMPLATE, configure_from_url, fix_url,
                    get_from_config, get_package_registry, parse_file_url, parse_s3_url,
                    read_yaml, validate_package_name, write_yaml)
+from .packages import DotQuiltLayout
 
 
 def copy(src, dest):
@@ -64,60 +65,6 @@ def get(src):
     return FormatRegistry.deserialize(data, meta, ext=ext), meta.get('user_meta')
 
 
-def _tophashes_with_packages(registry=None):
-    """Return a dictionary of tophashes and their corresponding packages
-
-    Parameters:
-        registry (str): URI of the registry to enumerate
-
-    Returns:
-        dict: a dictionary of tophash keys and package name entries
-    """
-    registry_base_path = get_package_registry(fix_url(registry) if registry else None)
-    registry_url = urlparse(registry_base_path)
-    out = {}
-
-    if registry_url.scheme == 'file':
-        registry_dir = pathlib.Path(parse_file_url(registry_url))
-
-        for pkg_namespace_path in (registry_dir / 'named_packages').iterdir():
-            pkg_namespace = pkg_namespace_path.name
-
-            for pkg_subname_path in pkg_namespace_path.iterdir():
-                pkg_subname = pkg_subname_path.name
-                pkg_name = pkg_namespace + '/' + pkg_subname
-
-                package_timestamps = [ts.name for ts in pkg_subname_path.iterdir()
-                                      if ts.name != 'latest']
-
-                for timestamp in package_timestamps:
-                    tophash = (pkg_namespace_path / pkg_subname / timestamp).read_text()
-                    if tophash in out:
-                        out[tophash].update({pkg_name})
-                    else:
-                        out[tophash] = {pkg_name}
-
-    elif registry_url.scheme == 's3':
-        bucket, path, _ = parse_s3_url(registry_url)
-
-        pkg_namespace_path = path + '/named_packages/'
-
-        for pkg_entry in list_objects(bucket, pkg_namespace_path):
-            pkg_entry_path = pkg_entry['Key']
-            tophash, _ = get_bytes('s3://' + bucket + '/' + pkg_entry_path)
-            tophash = tophash.decode('utf-8')
-            pkg_name = "/".join(pkg_entry_path.split("/")[-3:-1])
-
-            if tophash in out:
-                out[tophash].update({pkg_name})
-            else:
-                out[tophash] = {pkg_name}
-
-    else:
-        raise NotImplementedError
-
-    return out
-
 
 def delete_package(name, registry=None):
     """
@@ -128,49 +75,69 @@ def delete_package(name, registry=None):
         registry (str): The registry the package will be removed from
     """
     validate_package_name(name)
-    usr, pkg = name.split('/')
 
     registry_base_path = get_package_registry(fix_url(registry) if registry else None)
 
-    named_packages = registry_base_path.rstrip('/') + '/named_packages/'
-    package_path = named_packages + name + '/'
+    manifest_dir_to_wipe = f"{registry_base_path}/{DotQuiltLayout.get_manifest_dir(name)}"
+    tag_dir_to_wipe = f"{registry_base_path}/{DotQuiltLayout.get_tag_dir(name)}"
 
-    paths = list(list_url(package_path))
-    if not paths:
-        raise QuiltException("No such package exists in the given directory.")
+    manifest_paths = list(list_url(manifest_dir_to_wipe))
+    tag_paths = list(list_url(tag_dir_to_wipe))
 
-    for path, _ in paths:
-        delete_url(package_path + path)
+    if not manifest_paths and not tag_paths:
+        raise QuiltException("No such package exists!")
+
+    for path, _ in manifest_paths:
+        delete_url(f"{manifest_dir_to_wipe}/{path}")
+
+    for path, _ in tag_paths:
+        delete_url(f"{tag_dir_to_wipe}/{path}")
 
     # Will ignore non-empty dirs.
-    delete_url(package_path)
-    delete_url(named_packages + usr + '/')
+    delete_url(manifest_dir_to_wipe)
+    delete_url(tag_dir_to_wipe)
 
 
 def list_packages(registry=None):
     """Lists Packages in the registry.
 
-    Returns a sequence of all named packages in a registry.
+    Returns a sequence of all packages in a registry.
     If the registry is None, default to the local registry.
 
     Args:
         registry(string): location of registry to load package from.
 
     Returns:
-        A sequence of strings containing the names of the packages
+        A list of strings containing the names of the packages
     """
     registry_base_path = get_package_registry(fix_url(registry) if registry else None)
 
-    named_packages = registry_base_path.rstrip('/') + '/named_packages/'
-    prev_pkg = None
-    for path, _ in list_url(named_packages):
-        parts = path.split('/')
-        if len(parts) == 3:
-            pkg = f'{parts[0]}/{parts[1]}'
-            # A package can have multiple versions, but we should only return the name once.
-            if pkg != prev_pkg:
-                prev_pkg = pkg
-                yield pkg
+    package_dir = f"{fix_url(registry_base_path)}/{DotQuiltLayout.get_global_manifest_dir()}"
+    scheme = urlparse(package_dir)
+    if scheme == "file":
+        global_package_dir = pathlib.Path(package_dir)
+        package_names_with_prefix = [str(package_dir.relative_to(global_package_dir))
+                                     for package_dir
+                                     in global_package_dir.iterdir()]
+
+    elif scheme == 's3':
+        package_names_with_prefix, _ = list_objects(bucket=registry,
+                                                     prefix=f"{DotQuiltLayout.get_global_manifest_dir()}/",
+                                                     recursive=False)
+
+    else:
+        raise NotImplementedError(f"We only support file and s3 urls, not {scheme}")
+
+    package_names = []
+    for package_name_with_prefix in package_names_with_prefix:
+        partition_key_prefix = 'package='
+        assert package_name_with_prefix.startswith(partition_key_prefix), f"The package dir should start with " \
+            f"'{partition_key_prefix}'.\n" \
+            f"Instead got: {package_name_with_prefix}"
+        package_name = package_name_with_prefix[:len(partition_key_prefix)]
+        package_names.append(package_name)
+
+    return package_names
 
 
 def list_package_versions(name, registry=None):
@@ -183,18 +150,23 @@ def list_package_versions(name, registry=None):
         registry(string): location of registry to load package from.
 
     Returns:
-        A sequence of tuples containing the named version and hash.
+        A sequence of tuples containing the package name and hash.
     """
+    # TODO(armand): The semantics of this API have changed
     validate_package_name(name)
 
     registry_base_path = get_package_registry(fix_url(registry) if registry else None)
 
-    package = registry_base_path.rstrip('/') + '/named_packages/' + name + '/'
-    for path, _ in list_url(package):
-        parts = path.split('/')
-        if len(parts) == 1:
-            pkg_hash, _ = get_bytes(package + parts[0])
-            yield parts[0], pkg_hash.decode().strip()
+    manifest_dir_url = f'{registry_base_path}/{DotQuiltLayout.get_manifest_dir(name)}/'
+
+    for path, _ in list_url(manifest_dir_url):
+        filename = path.split('/')[-1]
+        assert filename.endswith(".jsonl"), f"A manifest file should end in .jsonl. Instead got: {filename}"
+        hash = filename[:-len(".jsonl")]
+        yield name, hash
+
+
+
 
 
 def config(*catalog_url, **config_values):

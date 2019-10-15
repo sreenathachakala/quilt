@@ -34,7 +34,7 @@ class Timer:
 
 from .data_transfer import (
     calculate_sha256, copy_file, copy_file_list, get_bytes, get_size_and_meta,
-    list_object_versions, put_bytes
+    list_object_versions, list_objects, put_bytes, create_s3_client
 )
 from .exceptions import PackageException
 from .formats import FormatRegistry
@@ -80,6 +80,95 @@ def _to_singleton(physical_keys):
 def _delete_local_physical_key(pk):
     assert file_is_local(pk), "This function only works on files that live on a local disk"
     pathlib.Path(parse_file_url(urlparse(pk))).unlink()
+
+
+class DotQuiltLayout:
+    latest_tag = "latest"
+
+    @classmethod
+    def get_manifest_key_by_tophash(cls, package_name, top_hash):
+        hash_prefix = top_hash[:2]
+        return f".quilt/manifests/package={package_name}/hash_prefix={hash_prefix}/{top_hash}.jsonl"
+
+    @classmethod
+    def get_tag_pointer_key(cls, package_name, tag):
+        return f".quilt/tags/package={package_name}/tag={tag}/pointer.txt"
+
+    @classmethod
+    def get_tag_dir(cls, package_name):
+        """ Beware bugs around packages name "mypackage" and "mypackagelonger" """
+        return f".quilt/tags/package={package_name}"
+
+    @classmethod
+    def get_manifest_dir(cls, package_name):
+        """ Beware bugs around packages name "mypackage" and "mypackagelonger" """
+        return f".quilt/manifests/package={package_name}"
+
+    @classmethod
+    def get_global_manifest_dir(cls):
+        return f".quilt/manifests"
+
+def url_exists(file_url):
+    file_url = fix_url(file_url)
+    u = urlparse(file_url)
+    if u.scheme == "file":
+        return pathlib.Path(file_url).is_file()
+    elif u.scheme == "s3":
+        bucket, key, version = parse_s3_url(file_url) # TODO(armand): Handling unversioned buckets correctly?
+        s3_client = create_s3_client()
+        try:
+            if version:
+                _ = s3_client.head_object(Bucket=bucket, Key=key, VersionId=version)
+            else:
+                _ = s3_client.head_object(Bucket=bucket, Key=key)
+            return True
+        except Exception as ex:
+            if ": Not Found" in str(ex):
+                return False
+            raise ex
+    else:
+        raise NotImplementedError(f"Unrecognized url scheme {u.scheme} from: {file_url}")
+
+
+
+def get_most_recent_top_hash(registry, package_name):
+    scheme = urlparse(fix_url(registry)).scheme
+    if scheme == "file":
+        # TODO(armand): This behavior is undecided ATM. Figure out what to do here
+        raise NotImplementedError("We haven't decided how to find the most recent manifest on a filesystem")
+    elif scheme == "s3":
+        return latest_package_version_s3(registry, package_name)
+    else:
+        raise NotImplementedError(f"We only support s3 and local filesystem, not {scheme}")
+
+
+def latest_package_version_s3(registry, package_name):
+    """
+    :param registry:
+    :param package_name:
+    :return: tophash of the most recetly update version
+    """
+    # TODO(armand): Might want to change this to not use LastModifiedTime if timestamp is available in manifest
+
+    registry = fix_url(registry)
+    packages_urlparse = urlparse(registry.rstrip('/') + f'/.quilt/packages/package={package_name}/')
+
+
+    bucket_name, package_s3_prefix, _ = parse_s3_url(packages_urlparse)
+
+    most_recent_timestamp_found = None
+    most_recent_tophash_found = None
+
+    for manifest_obj in list_objects(bucket_name, package_s3_prefix):
+        manifest_tophash = manifest_obj['Key'].split("/")[-1].replace(".jsonl", "")
+        last_modified_time = manifest_obj['LastModified']
+
+        if most_recent_timestamp_found is None or last_modified_time > most_recent_timestamp_found:
+            most_recent_tophash_found = manifest_tophash
+
+    if most_recent_tophash_found is None:
+        raise NotImplementedError("No manifests exist. We don't know how to handle that yet!")
+    return most_recent_tophash_found
 
 
 
@@ -391,12 +480,12 @@ class Package(object):
         return pkg
 
     @classmethod
-    def browse(cls, name=None, registry=None, top_hash=None):
+    def browse(cls, package_name, registry=None, top_hash=None):
         """
         Load a package into memory from a registry without making a local copy of
         the manifest.
         Args:
-            name(string): name of package to load
+            package_name(string): name of package to load
             registry(string): location of registry to load package from
             top_hash(string): top hash of package version to load
         """
@@ -404,20 +493,34 @@ class Package(object):
             registry = get_from_config('default_local_registry')
 
         registry = registry.rstrip('/')
-        validate_package_name(name)
-        name = quote(name)
+        validate_package_name(package_name)
+        package_name = quote(package_name)
 
-        if top_hash is not None:
-            # TODO: verify that name is correct with respect to this top_hash
-            # TODO: allow partial hashes (e.g. first six alphanumeric)
-            pkg_manifest_uri = fix_url(f'{registry}/.quilt/packages/{top_hash}')
-            return cls._from_path(pkg_manifest_uri)
-        else:
-            pkg_timestamp_file = f'{registry}/.quilt/named_packages/{name}/latest'
-            latest_pkg_hash, _ = get_bytes(pkg_timestamp_file)
+        if top_hash is None:
+            # Grab LATEST
+            # If pointer points to a manifest that exists, return that manifest
+            # If that pointer is hanging, find the LATEST based on LastModifiedTime and update LATEST pointer
+            s3_key_latest_pointer = DotQuiltLayout.get_tag_pointer_key(package_name, DotQuiltLayout.latest_tag)
+            s3_url_latest_pointer = f'{registry}/{s3_key_latest_pointer}'
+            latest_pkg_hash, _ = get_bytes(s3_url_latest_pointer)
             latest_pkg_hash = latest_pkg_hash.decode('utf-8').strip()
-            pkg_manifest_uri = fix_url(f'{registry}/.quilt/packages/{quote(latest_pkg_hash)}')
-            return cls._from_path(pkg_manifest_uri)
+
+            s3_url_latest_manifest = f'{registry}/{DotQuiltLayout.get_manifest_key_by_tophash(package_name, latest_pkg_hash)}'
+            manifest_exists = url_exists(s3_url_latest_manifest)
+
+            if manifest_exists:
+                top_hash = latest_pkg_hash
+
+            if not manifest_exists:
+                most_recent_top_hash = get_most_recent_top_hash(registry, package_name)
+                put_bytes(bytes(most_recent_top_hash.encode("utf-8")), s3_url_latest_pointer)
+                top_hash = most_recent_top_hash
+
+
+        s3_key = DotQuiltLayout.get_manifest_key_by_tophash(package_name, top_hash)
+        pkg_manifest_uri = fix_url(f'{registry}/{s3_key}')
+        return cls._from_path(pkg_manifest_uri)
+
 
 
     @classmethod
@@ -825,19 +928,16 @@ class Package(object):
         manifest = io.BytesIO()
         self.dump(manifest)
 
-        pkg_manifest_file = f'{registry}/.quilt/packages/{self.top_hash}'
+        # pkg_manifest_file = f'{registry}/.quilt/packages/{self.top_hash}'
+        # TODO(armand): Write timestamp to manifest metadata before pushing
+        pkg_manifest_file = f'{registry}/{DotQuiltLayout.get_manifest_key_by_tophash(name, self.top_hash)}'
         put_bytes(
             manifest.getvalue(),
             pkg_manifest_file
         )
 
-        named_path = f'{registry}/.quilt/named_packages/{name}/'
-        # TODO: use a float to string formater instead of double casting
-        hash_bytes = self.top_hash.encode('utf-8')
-        timestamp_path = named_path + str(int(time.time()))
-        latest_path = named_path + "latest"
-        put_bytes(hash_bytes, timestamp_path)
-        put_bytes(hash_bytes, latest_path)
+        latest_tag_path = f"{registry}/{DotQuiltLayout.get_tag_pointer_key(name, DotQuiltLayout.latest_tag)}"
+        put_bytes(bytes(self.top_hash.encode('utf-8')), latest_tag_path)
 
         return self
 
