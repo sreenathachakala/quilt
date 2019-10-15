@@ -119,6 +119,8 @@ def _upload_file(size, src_path, dest_bucket, dest_key, override_meta):
     else:
         meta = override_meta
 
+    meta = {}
+
 
     if size < s3_transfer_config.multipart_threshold:
         with OSUtils().open_file_chunk_reader(src_path, 0, size, []) as fd:
