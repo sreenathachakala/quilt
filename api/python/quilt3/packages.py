@@ -151,7 +151,7 @@ def latest_package_version_s3(registry, package_name):
     # TODO(armand): Might want to change this to not use LastModifiedTime if timestamp is available in manifest
 
     registry = fix_url(registry)
-    packages_urlparse = urlparse(registry.rstrip('/') + f'/.quilt/packages/package={package_name}/')
+    packages_urlparse = urlparse(registry.rstrip('/') + f'/{DotQuiltLayout.get_manifest_dir(package_name)}/')
 
 
     bucket_name, package_s3_prefix, _ = parse_s3_url(packages_urlparse)
@@ -928,7 +928,6 @@ class Package(object):
         manifest = io.BytesIO()
         self.dump(manifest)
 
-        # pkg_manifest_file = f'{registry}/.quilt/packages/{self.top_hash}'
         # TODO(armand): Write timestamp to manifest metadata before pushing
         pkg_manifest_file = f'{registry}/{DotQuiltLayout.get_manifest_key_by_tophash(name, self.top_hash)}'
         put_bytes(
