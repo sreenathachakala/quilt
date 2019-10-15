@@ -287,6 +287,9 @@ def _copy_remote_file(size, src_bucket, src_key, src_version,
             VersionId=src_version
         )
 
+    # TODO(armand): Quick and dirty way to disable metadata being written to object HEAD
+    override_meta = None
+
     s3_client = create_s3_client()
 
     if size < s3_transfer_config.multipart_threshold:
@@ -370,6 +373,8 @@ def _upload_or_copy_file(s3_client, size, src_path, dest_bucket, dest_path, over
     # Optimization: check if the remote file already exists and has the right ETag,
     # and skip the upload.
     if size >= UPLOAD_ETAG_OPTIMIZATION_THRESHOLD:
+        # TODO(armand): Check if older versions match using list_object_versions (optional if expensive)
+        #
         try:
             resp = s3_client.head_object(Bucket=dest_bucket, Key=dest_path)
         except ClientError:
