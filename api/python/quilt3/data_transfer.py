@@ -722,58 +722,119 @@ def get_size_and_meta(src):
         raise NotImplementedError
     return size, meta, version
 
+
+def _process_url(args):
+    CHUNK_THRESH = 1_000_000
+    assert len(args) == 3
+    src, size, q = args
+    # print(args)
+    src_url = urlparse(src)
+    hash_obj = hashlib.sha256()
+    if src_url.scheme == 'file':
+        path = pathlib.Path(parse_file_url(src_url))
+
+        with open(path, 'rb') as fd:
+            # print("opened file")
+            progress_counter = 0
+            while True:
+                # print("i")
+                chunk = fd.read(1024)
+
+
+                # print("j")
+                if not chunk:
+                    # print("loop breal")
+                    break
+                progress_counter += len(chunk)
+                if progress_counter > CHUNK_THRESH:
+                    q.put(progress_counter)
+                    progress_counter = 0
+                hash_obj.update(chunk)
+            current_file_size = fd.tell()
+
+            # print(current_file_size)
+            if current_file_size != size:
+                # print("warn")
+                warnings.warn(
+                        f"Expected the package entry at {src!r} to be {size} B in size, but "
+                        f"found an object which is {current_file_size} B instead. This "
+                        f"indicates that the content of the file changed in between when you "
+                        f"included this  entry in the package (via set or set_dir) and now. "
+                        f"This should be avoided if possible."
+                )
+            q.put(progress_counter)
+            # q.put(1)
+            # print("Done with file!")
+
+    elif src_url.scheme == 's3':
+        src_bucket, src_path, src_version_id = parse_s3_url(src_url)
+        params = dict(Bucket=src_bucket, Key=src_path)
+        if src_version_id is not None:
+            params.update(dict(VersionId=src_version_id))
+        s3_client = create_s3_client()
+        resp = s3_client.get_object(**params)
+        body = resp['Body']
+        for chunk in body:
+            hash_obj.update(chunk)
+            q.put(len(chunk))
+        print("Done!")
+    else:
+        # print("e")
+        raise NotImplementedError
+    # print("Done with entrie object!")
+    # q.put(1)
+    return hash_obj.hexdigest()
+
+
+
 def calculate_sha256(src_list, sizes):
     assert len(src_list) == len(sizes)
 
     total_size = sum(sizes)
-    lock = Lock()
+    import multiprocessing # multiprocessing.cpu_count
+    import itertools
+    from multiprocessing import Queue, Pool
+    import time
+    import uuid
+    import os
+    m = multiprocessing.Manager()
+    shared_queue = m.Queue()
+    manual_progress = 0
+    DEFAULT_QUILT_SLEEP_TIME = 0.1
+    sleep_time = os.environ.get("QUILT_SLEEP_TIME", DEFAULT_QUILT_SLEEP_TIME)
+    sleep_time = float(sleep_time)
 
-    with tqdm(desc="Hashing", total=total_size, unit='B', unit_scale=True) as progress:
-        def _process_url(src, size):
-            src_url = urlparse(src)
-            hash_obj = hashlib.sha256()
-            if src_url.scheme == 'file':
-                path = pathlib.Path(parse_file_url(src_url))
+    print(total_size)
+    DEFAULT_QUILT_NUM_WORKERS = multiprocessing.cpu_count()
+    num_workers = os.environ.get("QUILT_NUM_WORKERS", DEFAULT_QUILT_NUM_WORKERS)
+    num_workers = int(num_workers)
+    print("sleep", sleep_time)
+    print("workers", num_workers)
+    with Pool(num_workers) as p:
+        async_results = p.map_async(_process_url, zip(src_list, sizes, itertools.repeat(shared_queue)))
+        with tqdm(desc="Hashing", total=total_size, unit='B', unit_scale=True) as progress:
+            while True:
+                try:
+                    chunk_size = shared_queue.get(block=False)
+                    manual_progress += chunk_size
+                    # print(manual_progress, "of", len(sizes))
+                    progress.update(chunk_size)
+                    # print(manual_progress, "of", total_size)
 
-                with open(path, 'rb') as fd:
-                    while True:
-                        chunk = fd.read(1024)
-                        if not chunk:
-                            break
-                        hash_obj.update(chunk)
-                        with lock:
-                            progress.update(len(chunk))
+                    if manual_progress == total_size:
+                        break
+                except Exception as e:
 
-                    current_file_size = fd.tell()
-                    if current_file_size != size:
-                        warnings.warn(
-                            f"Expected the package entry at {src!r} to be {size} B in size, but "
-                            f"found an object which is {current_file_size} B instead. This "
-                            f"indicates that the content of the file changed in between when you "
-                            f"included this  entry in the package (via set or set_dir) and now. "
-                            f"This should be avoided if possible."
-                        )
+                    time.sleep(sleep_time)
+                    continue
 
-            elif src_url.scheme == 's3':
-                src_bucket, src_path, src_version_id = parse_s3_url(src_url)
-                params = dict(Bucket=src_bucket, Key=src_path)
-                if src_version_id is not None:
-                    params.update(dict(VersionId=src_version_id))
-                s3_client = create_s3_client()
-                resp = s3_client.get_object(**params)
-                body = resp['Body']
-                for chunk in body:
-                    hash_obj.update(chunk)
-                    with lock:
-                        progress.update(len(chunk))
-            else:
-                raise NotImplementedError
-            return hash_obj.hexdigest()
 
-        with ThreadPoolExecutor() as executor:
-            results = executor.map(_process_url, src_list, sizes)
+        results = async_results.get()
+        assert async_results.successful(), "There was an uncaught error during hashing that we don't know how " \
+                                           "to automatically fix. Sorry :("
+        return results
 
-    return results
+
 
 
 def select(url, query, meta=None, raw=False, **kwargs):
