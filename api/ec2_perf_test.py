@@ -29,7 +29,9 @@ def perf_test_set():
     pkg = Package()
     # data_dir = "/home/ubuntu/coco/data/train2017/"
     # data_dir = "/Users/armandmcqueen/data/coco/val2017/"
-    data_dir = "/Users/armandmcqueen/data/coco/"
+    # data_dir = "/Users/armandmcqueen/data/coco/"
+
+    data_dir = "/home/ubuntu/coco/data/"
     t = Timer(f"pkg.set_dir({data_dir})").start()
     pkg.set_dir("data", data_dir)
     t.stop()
