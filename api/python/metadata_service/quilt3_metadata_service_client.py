@@ -115,17 +115,26 @@ class Query:
         self.select_params = []
         self.where_clauses = []
 
-    def select(self, params):
+    def select(self, params, *args):
+        if isinstance(params, str) or isinstance(params, dict):
+            params = [params]
+
         assert isinstance(params, list)
         for p in params:
             assert isinstance(p, str) or isinstance(p, dict)
+
+        params.extend(args)
         self.select_params = params
         return self
 
-    def where(self, where_clauses):
+    def where(self, where_clauses, *args):
+        if isinstance(where_clauses, str):
+            where_clauses = [where_clauses]
         assert isinstance(where_clauses, list)
         for p in where_clauses:
-            assert isinstance(p, str) or isinstance(p, dict)
+            assert isinstance(p, str)
+
+        where_clauses.extend(args)
         self.where_clauses = where_clauses
         return self
 
@@ -261,12 +270,18 @@ def query_packages_that_contain_obj(s3_url="s3://quilt-ml-data/data/raw/train201
 
 
 if __name__ == '__main__':
+    tophash = "5708d60b8f27213ce3936d79a698916b68415e3efa0b5474d913de59f8ed999c"
+    df = Query(package="coco-trainval2017", tophash=tophash).select("logical_key", "size").where("size > 500000").run()
+    print(df)
+
+    quit()
 
     print("This query shows which packages use any version of this s3 object: s3://quilt-ml-data/data/raw/train2017/000000001164.jpg")
     print()
     q = Query()
-    r = q.select(["package", "manifest_commit_message", "hash"]) \
+    q = q.select(["package", "manifest_commit_message", "hash"]) \
          .where(["""regexp_replace(physical_key, '\?.+') = 's3://quilt-ml-data/data/raw/train2017/000000001164.jpg' """])
+    q.display_sql()
     df = q.run()
     print(df)
     print()
