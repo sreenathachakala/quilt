@@ -29,9 +29,9 @@ def perf_test_set():
     pkg = Package()
     # data_dir = "/home/ubuntu/coco/data/train2017/"
     # data_dir = "/Users/armandmcqueen/data/coco/val2017/"
-    # data_dir = "/Users/armandmcqueen/data/coco/"
+    data_dir = "/Users/armandmcqueen/data/coco/"
 
-    data_dir = "/home/ubuntu/coco/data/"
+    # data_dir = "/home/ubuntu/coco/data/"
     t = Timer(f"pkg.set_dir({data_dir})").start()
     pkg.set_dir("data", data_dir)
     t.stop()
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     #       These numbers are from the second run onwards
     # [Original-Laptop] : 12-14 seconds
     # [With processes and queue - Laptop]: 2.6 seconds (2 workers)
-    #                           2.3 seconds (4 workers)
+    #                                      2.3 seconds (4 workers)
 
     # Laptop test = annotations + val2017 + train2017 (39875 only=6.1G) =  8.17GB
     # [Original-Laptop] = 159-168seconds, only two 'cores' were used
@@ -72,3 +72,6 @@ if __name__ == '__main__':
     #               60seconds when restricted to 2 processes (only 2 cores in use)
     #               30-33 seconds (6 processes)
 
+    # Cloud VM test = coco 2017, 59.6 GB
+    # [New-m5.8xl-32vcpu] = 472seconds. 120seconds 2nd time onwards (wtf). 441s after reboot (32 processes)
+    # [Original-m5.8xl-32vcpu] = 690 after reboot. 630 2nd time onwards.
