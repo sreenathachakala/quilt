@@ -40,9 +40,11 @@ def create_s3_client():
     # Check whether credentials are present
     if boto_session.get_credentials() is None:
         # Use unsigned boto if credentials aren't present
+        print("go unsigned credentials")
         s3_client = boto_session.client('s3', config=Config(signature_version=UNSIGNED))
     else:
         # Use normal boto
+        print("go normal credentials")
         s3_client = boto_session.client('s3')
 
     # Enable/disable file read callbacks when uploading files.
@@ -106,7 +108,7 @@ def _upload_file(size, src_path, dest_bucket, dest_key, override_meta):
     if size < s3_transfer_config.multipart_threshold:
         with OSUtils().open_file_chunk_reader(src_path, 0, size, []) as fd:
             try:
-                s3_client = boto3.client('s3')
+                # s3_client = boto3.client('s3')
                 resp = s3_client.put_object(
                     Body=fd,
                     Bucket=dest_bucket,
