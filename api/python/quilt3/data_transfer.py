@@ -341,11 +341,11 @@ def worker(list_of_arg_tuples):
     s3_client = create_s3_client()
 
     for args in list_of_arg_tuples:
-        assert len(args) == 4
+        assert len(args) == 5
 
     returns = []
     for args in list_of_arg_tuples:
-        src_url, dest_url, size, override_meta = args
+        src_url, dest_url, size, override_meta, q = args
 
 
 
@@ -360,6 +360,7 @@ def worker(list_of_arg_tuples):
                 if dest_version_id:
                     raise ValueError("Cannot set VersionId on destination")
                 file_s3_path = _upload_or_copy_file(s3_client, size, src_path, dest_bucket, dest_path, override_meta)
+                q.put(size)
                 returns.append(file_s3_path)
             else:
                 raise NotImplementedError
@@ -387,6 +388,12 @@ def _copy_file_list_internal(file_list):
     Returns versioned URLs for S3 destinations and regular file URLs for files.
     """
 
+    import multiprocessing
+    from multiprocessing import Queue, Pool
+    import time
+
+    m = multiprocessing.Manager()
+    shared_queue = m.Queue()
 
     pool_worker_count = 40
     from multiprocessing import Pool
@@ -395,13 +402,33 @@ def _copy_file_list_internal(file_list):
         batched_file_lists.append([])
     for i, file_tuple in enumerate(file_list):
         worker_id = i % pool_worker_count
-        batched_file_lists[worker_id].append(file_tuple)
+        args = list(file_tuple) + [shared_queue]
+        batched_file_lists[worker_id].append(args)
+
+    SLEEP_TIME = 0.1
+    total_size = sum([size for src, dest, size, override_meta in file_list])
+    manual_progress = 0
 
 
     with Pool(pool_worker_count) as p:
-        result_sets = p.map(worker, batched_file_lists)
+        async_result_sets = p.map_async(worker, batched_file_lists)
+        with tqdm(desc="Pushing", total=total_size, unit='B', unit_scale=True) as progress:
+            while True:
+                try:
+                    chunk_size = shared_queue.get(block=False)
+                    manual_progress += chunk_size
+                    # print(manual_progress, "of", total_size)
+                    progress.update(chunk_size)
+
+                    if manual_progress == total_size:
+                        break
+                except Exception as e:
+                    # print("ex")
+                    time.sleep(SLEEP_TIME)
+                    continue
+
     flattened_results = []
-    for result_set in result_sets:
+    for result_set in async_result_sets:
         flattened_results.extend(result_set)
     # for idx, args in enumerate(file_list):
     #     run_task(worker, idx, *args)
