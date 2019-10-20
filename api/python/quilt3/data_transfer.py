@@ -713,8 +713,10 @@ def _process_url(args):
 
         with open(path, 'rb') as fd:
             while True:
+                print("another file!")
                 chunk = fd.read(1024)
                 if not chunk:
+                    print("donzo!")
                     break
                 hash_obj.update(chunk)
 
