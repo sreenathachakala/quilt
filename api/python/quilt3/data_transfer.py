@@ -105,13 +105,17 @@ def _upload_file(size, src_path, dest_bucket, dest_key, override_meta):
 
     if size < s3_transfer_config.multipart_threshold:
         with OSUtils().open_file_chunk_reader(src_path, 0, size, []) as fd:
-            print("dest:", dest_bucket, dest_key)
-            resp = s3_client.put_object(
-                Body=fd,
-                Bucket=dest_bucket,
-                Key=dest_key,
-                Metadata={HELIUM_METADATA: json.dumps(meta)},
-            )
+            try:
+                resp = s3_client.put_object(
+                    Body=fd,
+                    Bucket=dest_bucket,
+                    Key=dest_key,
+                    Metadata={HELIUM_METADATA: json.dumps(meta)},
+                )
+            except Exception as ex:
+                print("failure: ", "dest:", dest_bucket, dest_key)
+                print(ex)
+                raise(ex)
 
         version_id = resp.get('VersionId')  # Absent in unversioned buckets.
         out_key = dest_key
