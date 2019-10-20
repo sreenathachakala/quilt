@@ -40,7 +40,7 @@ def perf_test_set():
 def perf_test():
     pkg = perf_test_set()
     perf_test_hashing(pkg)
-    # perf_test_materialize(pkg)
+    perf_test_materialize(pkg)
 
 
 
