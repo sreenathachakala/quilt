@@ -794,14 +794,14 @@ def calculate_sha256(src_list, sizes):
                 try:
                     chunk_size = shared_queue.get(block=False)
                     manual_progress += chunk_size
-                    print(manual_progress, "of", len(sizes))
+                    # print(manual_progress, "of", total_size)
                     progress.update(chunk_size)
                     # print(manual_progress, "of", total_size)
 
                     if manual_progress == total_size:
                         break
                 except Exception as e:
-                    print("ex")
+                    # print("ex")
                     time.sleep(sleep_time)
                     continue
 
