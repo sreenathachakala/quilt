@@ -705,6 +705,7 @@ def get_size_and_meta(src):
 def _process_url(args):
     print("process_url")
     assert len(args) == 2, f"Args must be a tuple (src, size), not: {args}"
+    print("passed assert")
     src, size = args
     src_url = urlparse(src)
     hash_obj = hashlib.sha256()
