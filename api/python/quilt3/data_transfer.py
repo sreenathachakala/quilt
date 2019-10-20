@@ -709,11 +709,12 @@ def _process_url(args):
     src_url = urlparse(src)
     hash_obj = hashlib.sha256()
     if src_url.scheme == 'file':
+        print("is a file!")
         path = pathlib.Path(parse_file_url(src_url))
 
         with open(path, 'rb') as fd:
             while True:
-                print("another file!")
+                print("another chunck of the file!")
                 chunk = fd.read(1024)
                 if not chunk:
                     print("donzo!")
@@ -731,6 +732,7 @@ def _process_url(args):
                 )
 
     elif src_url.scheme == 's3':
+        print("is s3")
         src_bucket, src_path, src_version_id = parse_s3_url(src_url)
         params = dict(Bucket=src_bucket, Key=src_path)
         if src_version_id is not None:
@@ -741,6 +743,7 @@ def _process_url(args):
         for chunk in body:
             hash_obj.update(chunk)
     else:
+        print("is something else entirely...")
         raise NotImplementedError
     return hash_obj.hexdigest()
 
