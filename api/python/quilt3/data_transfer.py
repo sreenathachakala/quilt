@@ -703,38 +703,49 @@ def get_size_and_meta(src):
     return size, meta, version
 
 def _process_url(args):
-    print("process_url")
-    print(args)
-    assert len(args) == 2, f"Args must be a tuple (src, size), not: {args}"
-    print("passed assert")
-    src, size = args
+    CHUNK_THRESH = 1_000_000
+    assert len(args) == 3
+    src, size, q = args
+    # print(args)
     src_url = urlparse(src)
     hash_obj = hashlib.sha256()
     if src_url.scheme == 'file':
-        print("is a file!")
         path = pathlib.Path(parse_file_url(src_url))
 
         with open(path, 'rb') as fd:
+            # print("opened file")
+            progress_counter = 0
             while True:
-                print("another chunck of the file!")
+                # print("i")
                 chunk = fd.read(1024)
-                if not chunk:
-                    print("donzo!")
-                    break
-                hash_obj.update(chunk)
 
+
+                # print("j")
+                if not chunk:
+                    # print("loop breal")
+                    break
+                progress_counter += len(chunk)
+                if progress_counter > CHUNK_THRESH:
+                    q.put(progress_counter)
+                    progress_counter = 0
+                hash_obj.update(chunk)
             current_file_size = fd.tell()
+
+            # print(current_file_size)
             if current_file_size != size:
+                # print("warn")
                 warnings.warn(
-                    f"Expected the package entry at {src!r} to be {size} B in size, but "
-                    f"found an object which is {current_file_size} B instead. This "
-                    f"indicates that the content of the file changed in between when you "
-                    f"included this  entry in the package (via set or set_dir) and now. "
-                    f"This should be avoided if possible."
+                        f"Expected the package entry at {src!r} to be {size} B in size, but "
+                        f"found an object which is {current_file_size} B instead. This "
+                        f"indicates that the content of the file changed in between when you "
+                        f"included this  entry in the package (via set or set_dir) and now. "
+                        f"This should be avoided if possible."
                 )
+            q.put(progress_counter)
+            # q.put(1)
+            # print("Done with file!")
 
     elif src_url.scheme == 's3':
-        print("is s3")
         src_bucket, src_path, src_version_id = parse_s3_url(src_url)
         params = dict(Bucket=src_bucket, Key=src_path)
         if src_version_id is not None:
@@ -744,11 +755,14 @@ def _process_url(args):
         body = resp['Body']
         for chunk in body:
             hash_obj.update(chunk)
+            q.put(len(chunk))
+        print("Done!")
     else:
-        print("is something else entirely...")
+        # print("e")
         raise NotImplementedError
+    # print("Done with entrie object!")
+    # q.put(1)
     return hash_obj.hexdigest()
-
 
 def calculate_sha256(src_list, sizes):
     assert len(src_list) == len(sizes)
