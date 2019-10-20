@@ -106,6 +106,7 @@ def _upload_file(size, src_path, dest_bucket, dest_key, override_meta):
     if size < s3_transfer_config.multipart_threshold:
         with OSUtils().open_file_chunk_reader(src_path, 0, size, []) as fd:
             try:
+                s3_client = boto3.client('s3')
                 resp = s3_client.put_object(
                     Body=fd,
                     Bucket=dest_bucket,
