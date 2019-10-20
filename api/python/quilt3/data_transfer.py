@@ -40,11 +40,12 @@ def create_s3_client():
     # Check whether credentials are present
     if boto_session.get_credentials() is None:
         # Use unsigned boto if credentials aren't present
-        print("go unsigned credentials")
+        print("got unsigned credentials")
+        print(boto3.Session(botocore_session=botocore_session).client('sts').get_caller_identity())
         s3_client = boto_session.client('s3', config=Config(signature_version=UNSIGNED))
     else:
         # Use normal boto
-        print("go normal credentials")
+        print("got normal credentials")
         s3_client = boto_session.client('s3')
 
     # Enable/disable file read callbacks when uploading files.
