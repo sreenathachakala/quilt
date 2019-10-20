@@ -41,7 +41,7 @@ def create_s3_client():
     if boto_session.get_credentials() is None:
         # Use unsigned boto if credentials aren't present
         print("got unsigned credentials")
-        print(boto_session.client('sts').get_caller_identity())
+        # print(boto_session.client('sts').get_caller_identity())
         s3_client = boto_session.client('s3', config=Config(signature_version=UNSIGNED))
     else:
         # Use normal boto
