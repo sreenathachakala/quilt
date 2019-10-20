@@ -427,8 +427,11 @@ def _copy_file_list_internal(file_list):
                     time.sleep(SLEEP_TIME)
                     continue
 
+    result_sets = async_result_sets.get()
+    assert async_result_sets.successful(), "There was an uncaught error during pushing that we don't know how " \
+                                           "to automatically fix. Sorry :("
     flattened_results = []
-    for result_set in async_result_sets:
+    for result_set in result_sets:
         flattened_results.extend(result_set)
     # for idx, args in enumerate(file_list):
     #     run_task(worker, idx, *args)
