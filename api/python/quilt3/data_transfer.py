@@ -37,8 +37,13 @@ def create_s3_client():
     botocore_session = create_botocore_session()
     boto_session = boto3.Session(botocore_session=botocore_session)
 
+
+    # Disable unsigned clients as they are causing bugs during perf tests
+    if False:
+
+
     # Check whether credentials are present
-    if boto_session.get_credentials() is None:
+    # if boto_session.get_credentials() is None:
         # Use unsigned boto if credentials aren't present
         print("got unsigned credentials")
         # print(boto_session.client('sts').get_caller_identity())
