@@ -114,6 +114,7 @@ def _upload_file(size, src_path, dest_bucket, dest_key, override_meta):
                 )
             except Exception as ex:
                 print("failure: ", "dest:", dest_bucket, dest_key)
+                print(boto3.client('sts').get_caller_identity())
                 print(ex)
                 raise(ex)
 
