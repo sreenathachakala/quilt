@@ -38,21 +38,19 @@ def create_s3_client():
     boto_session = boto3.Session(botocore_session=botocore_session)
 
 
-    # Disable unsigned clients as they are causing bugs during perf tests
-    if False:
-
-
     # Check whether credentials are present
     # if boto_session.get_credentials() is None:
         # Use unsigned boto if credentials aren't present
-        print("got unsigned credentials")
+        # print("got unsigned credentials")
         # print(boto_session.client('sts').get_caller_identity())
-        s3_client = boto_session.client('s3', config=Config(signature_version=UNSIGNED))
-    else:
+        # s3_client = boto_session.client('s3', config=Config(signature_version=UNSIGNED))
+    # else:
         # Use normal boto
         # print("got normal credentials")
         # print(boto3.Session(botocore_session=botocore_session).client('sts').get_caller_identity())
-        s3_client = boto_session.client('s3')
+        # s3_client = boto_session.client('s3')
+
+    s3_client = boto3.client('s3')
 
     # Enable/disable file read callbacks when uploading files.
     # Copied from https://github.com/boto/s3transfer/blob/develop/s3transfer/manager.py#L501
