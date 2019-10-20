@@ -779,7 +779,7 @@ def calculate_sha256(src_list, sizes):
                     if manual_progress == total_size:
                         break
                 except Exception as e:
-
+                    print("ex")
                     time.sleep(sleep_time)
                     continue
 
