@@ -772,7 +772,7 @@ def calculate_sha256(src_list, sizes):
                 try:
                     chunk_size = shared_queue.get(block=False)
                     manual_progress += chunk_size
-                    # print(manual_progress, "of", len(sizes))
+                    print(manual_progress, "of", len(sizes))
                     progress.update(chunk_size)
                     # print(manual_progress, "of", total_size)
 
