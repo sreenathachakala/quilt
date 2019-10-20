@@ -27,11 +27,11 @@ class Timer:
 
 def perf_test_set():
     pkg = Package()
-    data_dir = "/Users/armandmcqueen/data/coco/val2017/"
+    # data_dir = "/Users/armandmcqueen/data/coco/val2017/"
     # data_dir = "/Users/armandmcqueen/data/coco/"
 
     # data_dir = "/home/ubuntu/data/coco/"
-    # data_dir = "/home/ubuntu/data/coco/val2017"
+    data_dir = "/home/ubuntu/data/coco/val2017"
     t = Timer(f"pkg.set_dir({data_dir})").start()
     pkg.set_dir("data", data_dir)
     t.stop()
