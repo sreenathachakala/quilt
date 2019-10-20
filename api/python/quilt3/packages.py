@@ -754,7 +754,11 @@ class Package(object):
             physical_keys.append(entry.physical_keys[0])
             sizes.append(entry.size)
 
+        print("entering calculate_sha256")
+
         results = calculate_sha256(physical_keys, sizes)
+
+        print("done with calculate_sha256")
 
         for entry, obj_hash in zip(entries, results):
             entry.hash = dict(type='SHA256', value=obj_hash)
