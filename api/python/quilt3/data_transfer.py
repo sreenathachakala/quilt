@@ -703,6 +703,7 @@ def get_size_and_meta(src):
     return size, meta, version
 
 def _process_url(args):
+    print("process_url")
     assert len(args) == 2, f"Args must be a tuple (src, size), not: {args}"
     src, size = args
     src_url = urlparse(src)
