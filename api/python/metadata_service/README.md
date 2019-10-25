@@ -3,7 +3,7 @@
 
 ## Table structures
 
-The underlying technology is Athena. There are two logical tables that can be queried:
+The underlying technology is Athena. There are two views that can be queried:
 
 1. Manifests themselves
     - `quilt_metadata_service_manifests`
@@ -16,7 +16,7 @@ The underlying technology is Athena. There are two logical tables that can be qu
     - Calculate total size of all objects in this version of this package
     - Look at file type breakdown in this package
 
-You may want to combine the two tables. This is a valuable but more expensive operation.
+   __You may want to combine the two tables. This is a valuable but more expensive operation exposed via a third view:__
 
 3. Entries along with which manifest they are in
     - `quilt_metadata_service_combined`
@@ -27,7 +27,7 @@ The underlying data is partitioned by `package` and by the first few characters 
     
 ## Usage
 
-- You can use the metadata tables in any way that you can consume Athena with the [`pyathena`](https://github.com/laughingman7743/PyAthena) library. We provide a couple utilities to make this easy.
+You can use the metadata tables in any way that you can consume Athena with the [`pyathena`](https://github.com/laughingman7743/PyAthena) library. We provide a couple utilities to make this easy.
 
 1. Raw SQL
 2. Structured SQL (convenience tool for writing raw SQL that automatically leverages partitioning to improve performance)
