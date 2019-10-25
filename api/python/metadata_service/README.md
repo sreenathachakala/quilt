@@ -23,7 +23,7 @@ The underlying technology is Athena. There are two views that can be queried:
     - Which version of this package contain this s3 object+version?
     - What is the average number of keys across version of this package?
     
-The underlying data is partitioned by `package` and by the first few characters of the `tophash` so you can leverage that to improve query speed.
+The underlying data is partitioned by `package` and by the first two characters of the manifest `hash` so you can leverage that to improve query speed.
     
 ## Usage
 
@@ -49,9 +49,13 @@ SELECT logical_key
    , object_hash
    , package
    , manifest_commit_message
-   , hash 
+   , hash
    , meta -- user defined metadata for each logical_key (work with meta using Presto JSON tools)
-FROM "default"."quilt_metadata_service_combined" limit 10;
+FROM "default"."quilt_metadata_service_combined" 
+WHERE package='coco-train2017'
+AND hash_prefix='ca' -- Leverage partitions to speed up the query if you want to query a specific manifest hash
+AND hash='ca67d9dc4105d6fbaf3279c949a91f0e739063252cbfb9bc0ab64d315203e3a3'
+LIMIT 100;
 """).execute()
 ```
 
@@ -65,8 +69,8 @@ from quilt3 import MetadataQuery
 rows = MetadataQuery(
                         bucket="quilt-ml-data",
                         table="quilt_metadata_service_combined",
-                        package="mypackage", 
-                        tophash="84be4b8df0a35ce7a85c08d9a506ca3bfa430aca00fcab9650dc25ac1f37c0a9"
+                        package="coco-train2017", 
+                        tophash="ca67d9dc4105d6fbaf3279c949a91f0e739063252cbfb9bc0ab64d315203e3a3"
                      ).select([
                         "logical_key",
                         "physical_key",
