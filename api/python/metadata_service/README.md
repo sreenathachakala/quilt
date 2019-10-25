@@ -15,7 +15,6 @@ The underlying technology is Athena. There are two logical tables that can be qu
     - How many entries are there in this version of this package?
     - Calculate total size of all objects in this version of this package
     - Look at file type breakdown in this package
-    - 
 
 You may want to combine the two tables. This is a valuable but more expensive operation.
 
