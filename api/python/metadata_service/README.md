@@ -34,7 +34,7 @@ The underlying data is partitioned by `package` and by the first few characters 
 3. SQLAlchemy engine
 4. The `pyathena.Connection` object is exposed, which is [Python DB API 2.0 (PEP 249)](https://www.python.org/dev/peps/pep-0249) compliant.
 
-Between the SQLAlchemy engine and the DBAPI2.0 compliant connection, you will be able to query metadata from many other clients, for example `pandas.DataFrame.read_sql`.
+Between the SQLAlchemy engine and the DBAPI2.0 compliant connection, you will be able to query metadata from many other clients, for example `pandas.read_sql`.
 
 ### Raw SQL
 
