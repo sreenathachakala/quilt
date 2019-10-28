@@ -89,6 +89,34 @@ rows = MetadataQuery(
 ```
 Note `table`, `package` and `tophash` are optional, but if you pass one or more of them in, `MetadataQuery` can automatically leverage Athena partitioning to execute a more performant query.
 
+##### Explore metadata
+
+We provide some utilities that wrap Presto JSON operations as native Python code:
+
+```python
+meta = PrestoJsonSugar()
+
+rows = MetadataQuery(
+                        bucket="quilt-ml-data",
+                        table="quilt_metadata_service_combined",
+                        package="coco-train2017", 
+                        tophash="ca67d9dc4105d6fbaf3279c949a91f0e739063252cbfb9bc0ab64d315203e3a3"
+                     ).select([
+                        "logical_key",
+                        meta["user_meta"]["coco_meta"]["annotation_info"]["category.names"].name_col_as("objects_in_image"),
+                        meta["user_meta"]["split"].name_col_as("split"),
+                        "package",
+                        "physical_key"
+                    ]).where([
+                        meta["user_meta"]["coco_meta"]["annotation_info"]["category.names"].contains('car'),
+                        meta["user_meta"]["split"] == 'train2017',
+                        meta["user_meta"]["filetype"].is_in(['jpg', 'png'])
+                    ]).execute()
+```
+
+
+
+
 ### SQLAlchemy
 
 
