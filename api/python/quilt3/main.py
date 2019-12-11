@@ -70,7 +70,7 @@ def create_parser():
         required=False,
     )
     install_p.add_argument(
-        "--top-hash",
+        "--tophash",
         help="Hash of package to install. Defaults to latest.",
         type=str,
         required=False,
@@ -103,7 +103,7 @@ def create_parser():
         required=True,
     )
     verify_p.add_argument(
-        "--top-hash",
+        "--tophash",
         help="Hash of package to verify",
         type=str,
         required=True,
