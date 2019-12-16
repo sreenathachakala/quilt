@@ -1,0 +1,38 @@
+# Naming
+#cluster_template_name: "quilt3-perf-test-network"
+cluster_id: 1
+
+# Launch Location
+region: "us-east-1"
+az: "us-east-1a"
+
+# Staging account VPC
+vpc_id: "vpc-2dda6457"
+subnet_id: "subnet-a9e2d0e3"
+
+
+# AMI
+ami_id: "ami-025ed45832b817a35" # Ubuntu DLAMI 26.0, us-east-1
+ebs_snapshot_id: "snap-06cae210424f4eaa6" # for ami-025ed45832b817a35
+
+
+username: "ubuntu"
+
+# EBS
+volume_type: "gp2"
+volume_gbs: 500
+
+# Launch Settings
+#instance_type: "t3.nano"
+#node_count: 1
+
+iam_ec2_role_name: "quilt3_perf_test_armand"
+key_name: "perf-test"
+security_group_ids:
+  - "sg-0614904d81858b700" # quilt-ssh
+
+
+
+# EC2Cluster behavior args
+cluster_create_timeout_secs: 60 # Fail after 10 minutes without an increase in the cluster size
+ebs_optimized: Yes
