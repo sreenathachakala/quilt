@@ -28,6 +28,7 @@ if __name__ == '__main__':
         results = []
         for result_set in result_array:
             results.extend(result_set.stdout.split("\n"))
+        results = [r for r in results if r.strip() != ""]
         print(instance_type, results)
 
 
