@@ -86,6 +86,7 @@ def generate_dataset(base_path):
         
 
 if __name__ == '__main__':
+    generate_dataset("/tmp/synth_data/")
 
 
 
