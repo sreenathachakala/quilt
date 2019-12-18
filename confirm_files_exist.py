@@ -16,4 +16,4 @@ def check(dir_path):
 
 
 if __name__ == '__main__':
-    check("/tmp/synth_data")
+    check("/tmp/synth_data/10kb")
