@@ -69,7 +69,8 @@ def str_to_bytecount(size_str):
 
 def generate_dataset(base_path):
     total_dataset_size = gb(100)
-    files_sizes = ["10kb", "100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
+    # files_sizes = ["10kb", "100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
+    files_sizes = ["100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
 
     # Make sure total_dataset_size is cleanly divisible by the file_sizes
     print("Confirming that total_dataset_size is evenly divisble by all file_sizes")
