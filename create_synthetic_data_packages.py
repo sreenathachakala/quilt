@@ -31,6 +31,6 @@ def create_10gb_pkg():
 
 
 if __name__ == '__main__':
-    create_10mb_pkg()
+    create_1mb_pkg()
 
 
