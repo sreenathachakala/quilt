@@ -61,14 +61,15 @@ def generate_dataset(base_path):
     files_sizes = ["10kb", "100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
 
     # Make sure total_dataset_size is cleanly divisible by the file_sizes
+    print("Confirming that total_dataset_size is evenly divisble by all file_sizes")
     for file_size_str in files_sizes:
-        print("Confirming that total_dataset_size is evenly divisble by all file_sizes")
+
         file_size = str_to_bytecount(file_size_str)
         assert total_dataset_size % file_size == 0, "Total dataset size must be evenly divisible by file_size"
 
     # Check that directories don't already exist
+    print("Making sure the directories aren't already populated")
     for file_size_str in files_sizes:
-        print("Making sure the directories aren't already populated")
         dir_loc = Path(base_path) / file_size_str
         if dir_loc.exists():
             raise RuntimeError("Directory already exists. Code must run in a clean directory")
@@ -80,7 +81,7 @@ def generate_dataset(base_path):
         dir_loc = Path(base_path) / file_size_str
         dir_loc.mkdir(parents=True)
         file_size = str_to_bytecount(file_size_str)
-        num_files = total_dataset_size / file_size
+        num_files = int(total_dataset_size / file_size)
         for i in range(1, num_files+1):
             file_path = dir_loc / f"file{i}"
             print(file_path, f"(total files = {num_files+1})")
