@@ -102,7 +102,7 @@ def generate_dataset(base_path):
         file_paths = [dir_loc / f"file{i}" for i in range(1, num_files+1)]
 
         with multiprocessing.Pool(num_workers) as p:
-            async_results = p.map_async(generate_file, zip(file_paths,
+            async_results = p.map_async(generate_file_multiprocessing, zip(file_paths,
                                                            itertools.repeat(file_size),
                                                            itertools.repeat(shared_queue)))
             with tqdm(desc="Progress", total=num_files) as tqdm_progress:
