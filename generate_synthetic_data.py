@@ -1,6 +1,11 @@
 import os
 import random
 import time
+import multiprocessing as mp
+from tqdm import tqdm
+import multiprocessing
+import itertools
+import random
 from pathlib import Path
 
 NUM_BYTES_PER_WRITE=64000
@@ -8,6 +13,12 @@ NUM_BYTES_PER_WRITE=64000
 
 def gen_random_bytestring(num_bytes):
     return bytearray(random.getrandbits(8) for _ in range(num_bytes))
+
+def generate_file_multiprocessing(args):
+    assert len(args) == 3
+    file_path, num_bytes, q = args
+    generate_file(file_path, num_bytes)
+    q.put(1)
 
 def generate_file(file_path, num_bytes):
     current_bytecount = 0
@@ -82,11 +93,34 @@ def generate_dataset(base_path):
         dir_loc.mkdir(parents=True)
         file_size = str_to_bytecount(file_size_str)
         num_files = int(total_dataset_size / file_size)
-        for i in range(1, num_files+1):
-            file_path = dir_loc / f"file{i}"
-            print(file_path, f"(total files = {num_files+1})")
-            generate_file(file_path, file_size)
-        
+
+        m = multiprocessing.Manager()
+        shared_queue = m.Queue()
+        num_workers = 20
+        progress = 0
+
+        file_paths = [dir_loc / f"file{i}" for i in range(1, num_files+1)]
+
+        with multiprocessing.Pool(num_workers) as p:
+            async_results = p.map_async(generate_file, zip(file_paths,
+                                                           itertools.repeat(file_size),
+                                                           itertools.repeat(shared_queue)))
+            with tqdm(desc="Progress", total=num_files) as tqdm_progress:
+                while True:
+                    progress_update = shared_queue.get(block=True)
+                    progress += progress_update
+                    tqdm_progress.update(progress_update)
+
+                    if progress == num_files:
+                        break
+
+            assert async_results.successful(), "There was an uncaught error"
+
+
+
+
+
+
 
 if __name__ == '__main__':
     generate_dataset("/tmp/synth_data/")
