@@ -72,7 +72,7 @@ def generate_dataset(base_path):
     for file_size_str in files_sizes:
         dir_loc = Path(base_path) / file_size_str
         if dir_loc.exists():
-            raise RuntimeError("Directory already exists. Code must run in a clean directory")
+            raise RuntimeError(f"Directory {dir_loc} already exists. Code must run in a clean directory")
 
     # Generate the files
     for file_size_str in files_sizes:
