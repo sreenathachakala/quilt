@@ -12,6 +12,7 @@ def create_10kb_pkg():
     create_pkg("10kb")
 
 def create_100kb_pkg():
+    # In progress
     create_pkg("100kb")
 
 def create_1mb_pkg():
@@ -36,6 +37,6 @@ def create_10gb_pkg():
 
 
 if __name__ == '__main__':
-    create_1gb_pkg()
+    create_100kb_pkg()
 
 
