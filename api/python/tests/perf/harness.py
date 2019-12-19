@@ -7,12 +7,12 @@ from ec2_cluster.control import ClusterShell
 config_path = Path(__file__).parent/"ec2_config.yaml"
 
 m5_family_mini = [
-    "m5.2xlarge",
-    # "m5.4xlarge"
+    # "m5.2xlarge",
+    "m5.4xlarge"
 ]
 
 m5_family = [
-        "m5.large",
+        # "m5.large",
         "m5.xlarge",
         "m5.2xlarge",
         "m5.4xlarge",
@@ -57,6 +57,11 @@ def create_or_get_cluster(instance_type, instance_count, ssh_key_path, config_ya
                       worker_ips=cluster.public_ips[1:],
                       ssh_key_path=ssh_key_path)
 
+    print("IPs")
+    for ip in cluster.public_ips:
+        print(f"ssh -A ubuntu@{ip}")
+    print("---")
+
     if is_first_launch:
         while True:
             try:
@@ -75,12 +80,13 @@ def create_or_get_cluster(instance_type, instance_count, ssh_key_path, config_ya
 
 
 def run_perf_test(instance_types, cluster_setup_fn, perf_test_fn):
-    instance_count = 2
+    instance_count = 4
     ssh_key_path = Path("/Users/armandmcqueen/.ssh/perf-test.pem")
     unique_id = "armand"
 
     all_results = {}
     for instance_type in instance_types:
+        print("Instance Type:", instance_type)
         cluster, sh, is_first_launch = create_or_get_cluster(instance_type,
                                                              instance_count,
                                                              ssh_key_path,
@@ -88,7 +94,7 @@ def run_perf_test(instance_types, cluster_setup_fn, perf_test_fn):
         if is_first_launch:
             cluster_setup_fn(sh)
 
-        instance_type_results = perf_test_fn(sh)
+        instance_type_results = perf_test_fn(sh, instance_type)
 
         all_results[instance_type] = instance_type_results
 
