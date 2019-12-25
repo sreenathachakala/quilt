@@ -1,0 +1,23 @@
+DownloadPerf-10gb 1 582.88 0 10
+DownloadPerf-10gb 2 523.90 0 10
+DownloadPerf-10gb 3 517.95 0 10
+DownloadPerf-10gb 4 517.23 0 10
+DownloadPerf-10gb 5 525.30 0 10
+
+DownloadPerf-10gb 1 596.79 0 10
+DownloadPerf-10gb 2 533.12 0 10
+DownloadPerf-10gb 3 530.70 0 10
+DownloadPerf-10gb 4 530.96 0 10
+DownloadPerf-10gb 5 529.95 0 10
+
+DownloadPerf-10gb 1 597.75 0 10
+DownloadPerf-10gb 2 521.11 0 10
+DownloadPerf-10gb 3 524.30 0 10
+DownloadPerf-10gb 4 522.89 0 10
+DownloadPerf-10gb 5 525.29 0 10
+
+DownloadPerf-10gb 1 570.21 0 10
+DownloadPerf-10gb 2 510.76 0 10
+DownloadPerf-10gb 3 508.89 0 10
+DownloadPerf-10gb 4 511.09 0 10
+DownloadPerf-10gb 5 515.20 0 10

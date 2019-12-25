@@ -12,7 +12,7 @@ m5_family_mini = [
 ]
 
 m5_family = [
-        # "m5.large",
+        "m5.large",
         "m5.xlarge",
         "m5.2xlarge",
         "m5.4xlarge",

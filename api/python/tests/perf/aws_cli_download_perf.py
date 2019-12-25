@@ -6,7 +6,7 @@ import harness
 
 from ec2_cluster.control import ClusterShell
 
-SIZE="100mb"
+SIZE="100kb"
 aws_cli_download_script_loc = Path(__file__).parent/"time_aws_cli_download.py"
 
 def cluster_setup_fn(sh: ClusterShell):
@@ -14,6 +14,7 @@ def cluster_setup_fn(sh: ClusterShell):
                               "/home/ubuntu/time_aws_cli_download.py")
 
 def perf_test_fn(sh: ClusterShell, instance_type: str):
+    sh.run_on_all(f"touch /home/ubuntu/{instance_type}")
     sh.run_on_all(f"PYTHON_UNBUFFERED=True python /home/ubuntu/time_aws_cli_download.py {SIZE} > /home/ubuntu/{SIZE}.log")
     sh.copy_from_all_to_local(f"/home/ubuntu/{SIZE}.log",
                               f"/Users/armandmcqueen/code/quilt/api/python/tests/perf/{instance_type}/{SIZE}/")

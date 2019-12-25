@@ -34,5 +34,5 @@ security_group_ids:
 
 
 # EC2Cluster behavior args
-cluster_create_timeout_secs: 60 # Fail after 10 minutes without an increase in the cluster size
+cluster_create_timeout_secs: 86400
 ebs_optimized: Yes

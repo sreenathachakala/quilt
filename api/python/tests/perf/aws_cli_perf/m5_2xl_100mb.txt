@@ -1,0 +1,23 @@
+DownloadPerf-100mb 1 435.38 0 1000
+DownloadPerf-100mb 2 423.90 0 1000
+DownloadPerf-100mb 3 414.22 0 1000
+DownloadPerf-100mb 4 414.36 0 1000
+DownloadPerf-100mb 5 411.51 0 1000
+
+DownloadPerf-100mb 1 424.27 0 1000
+DownloadPerf-100mb 2 410.98 0 1000
+DownloadPerf-100mb 3 403.38 0 1000
+DownloadPerf-100mb 4 403.92 0 1000
+DownloadPerf-100mb 5 403.69 0 1000
+
+DownloadPerf-100mb 1 427.65 0 1000
+DownloadPerf-100mb 2 405.92 0 1000
+DownloadPerf-100mb 3 395.50 0 1000
+DownloadPerf-100mb 4 395.64 0 1000
+DownloadPerf-100mb 5 398.72 0 1000
+
+DownloadPerf-100mb 1 425.50 0 1000
+DownloadPerf-100mb 2 407.30 0 1000
+DownloadPerf-100mb 3 424.88 0 1000
+DownloadPerf-100mb 4 414.52 0 1000
+DownloadPerf-100mb 5 411.25 0 1000
