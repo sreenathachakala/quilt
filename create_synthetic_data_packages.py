@@ -10,29 +10,27 @@ def create_pkg(file_size_str, dataset_size):
 
 
 def create_100kb_pkg():
-    create_pkg("100kb", "1gb")
+    create_pkg("100kb", "100mb")
 
 def create_1mb_pkg():
-    create_pkg("1mb", "10gb")
+    create_pkg("1mb", "1gb")
 
 def create_10mb_pkg():
-    create_pkg("10mb", "10gb")
+    create_pkg("10mb", "1gb")
 
 def create_100mb_pkg():
-    create_pkg("100mb", "10gb")
+    create_pkg("100mb", "1gb")
 
-def create_1gb_pkg():
-    create_pkg("1gb", "10gb")
+# def create_1gb_pkg():
+#     create_pkg("1gb", "10gb")
 
 
 
 if __name__ == '__main__':
-    # create_100kb_pkg()
-
-
+    create_100kb_pkg()
     create_1mb_pkg()
     create_10mb_pkg()
     create_100mb_pkg()
-    create_1gb_pkg()
+    # create_1gb_pkg()
 
 
