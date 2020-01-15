@@ -68,32 +68,39 @@ def str_to_bytecount(size_str):
 
 
 def generate_dataset(base_path):
-    total_dataset_size = gb(100)
+    # total_dataset_size = gb(100)
     # files_sizes = ["10kb", "100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
-    files_sizes = ["100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
+    # files_sizes = ["100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
+    datasets = [
+        ("100kb", gb(1)),  # 10,000 files
+        ("1mb", gb(10)),  # 10,000
+        ("10mb", gb(10)),  # 1000
+        ("100mb", gb(10)), # 100
+        ("1gb", gb(10))  # 10
+    ]
 
     # Make sure total_dataset_size is cleanly divisible by the file_sizes
-    print("Confirming that total_dataset_size is evenly divisble by all file_sizes")
-    for file_size_str in files_sizes:
+    print("Confirming that total_dataset_size is evenly divisible by all file_sizes")
+    for file_size_str, dataset_size in datasets:
 
         file_size = str_to_bytecount(file_size_str)
-        assert total_dataset_size % file_size == 0, "Total dataset size must be evenly divisible by file_size"
+        assert dataset_size % file_size == 0, "Total dataset size must be evenly divisible by file_size"
 
     # Check that directories don't already exist
     print("Making sure the directories aren't already populated")
-    for file_size_str in files_sizes:
+    for file_size_str, dataset_size in datasets:
         dir_loc = Path(base_path) / file_size_str
         if dir_loc.exists():
             raise RuntimeError(f"Directory {dir_loc} already exists. Code must run in a clean directory")
 
     # Generate the files
-    for file_size_str in files_sizes:
+    for file_size_str, dataset_size in datasets:
         print()
         print(f"Starting {file_size_str}")
         dir_loc = Path(base_path) / file_size_str
         dir_loc.mkdir(parents=True)
         file_size = str_to_bytecount(file_size_str)
-        num_files = int(total_dataset_size / file_size)
+        num_files = int(dataset_size / file_size)
 
         m = multiprocessing.Manager()
         shared_queue = m.Queue()
