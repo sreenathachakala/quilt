@@ -133,6 +133,7 @@ if __name__ == '__main__':
     generate_dataset("/tmp/synth_data/")
 
 
+    # aws s3 cp --recursive /tmp/synth_data/100kb s3://quilt-example/data/random-data-benchmark/100kb
 
 
 
