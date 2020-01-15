@@ -72,11 +72,10 @@ def generate_dataset(base_path):
     # files_sizes = ["10kb", "100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
     # files_sizes = ["100kb", "1mb", "10mb", "100mb", "1gb", "10gb"]
     datasets = [
-        ("100kb", gb(1)),  # 10,000 files
-        ("1mb", gb(10)),  # 10,000
-        ("10mb", gb(10)),  # 1000
-        ("100mb", gb(10)), # 100
-        ("1gb", gb(10))  # 10
+        ("100kb", gb(0.1)),
+        ("1mb", gb(1)),
+        ("10mb", gb(1)),
+        ("100mb", gb(1)),
     ]
 
     # Make sure total_dataset_size is cleanly divisible by the file_sizes
