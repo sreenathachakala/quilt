@@ -4,7 +4,9 @@ disk and RAM pressure.
 
 Lambda functions can have up to 3GB of RAM and only 512MB of disk.
 """
+import gzip
 import io
+import json
 from contextlib import redirect_stderr
 from urllib.parse import urlparse
 
@@ -147,12 +149,22 @@ def lambda_handler(request):
             'info': info,
             'html': html,
         }
+        data = json.dumps(ret_val)
+
+        # TODO: Check `Accept-Encoding`
+        gzipped_data = gzip.compress(data.encode())
+        headers = {
+            "Content-Type": 'application/json',
+            'Content-Encoding': 'gzip'
+        }
+
+        return 200, gzipped_data, headers
 
     else:
         ret_val = {
             'error': resp.reason
         }
-    return make_json_response(200, ret_val)
+        return make_json_response(200, ret_val)
 
 def extract_csv(head, separator):
     """
