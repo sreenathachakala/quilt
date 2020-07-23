@@ -27,7 +27,7 @@ from .telemetry import ApiTelemetry
 from .util import (
     QuiltException, fix_url, get_from_config, get_install_location,
     validate_package_name, quiltignore_filter, validate_key, extract_file_extension,
-    parse_sub_package_name, RemovedInQuilt4Warning)
+    parse_sub_package_name, RemovedInQuilt4Warning, PACKAGE_UPDATE_POLICY)
 from .util import CACHE_PATH, TEMPFILE_DIR_PATH as APP_DIR_TEMPFILE_DIR, PhysicalKey, \
     user_is_configured_to_custom_stack, catalog_package_url, DISABLE_TQDM
 
@@ -304,15 +304,6 @@ class PackageEntry:
         Deprecated
         """
         return [self.physical_key]
-
-
-class PackageUpdatePolicy(enum.Enum):
-    INCOMING = 'incoming'
-    EXISTING = 'existing'
-
-    @classmethod
-    def has_value(cls, value):
-        return value in cls._value2member_map_
 
 
 class Package:
@@ -745,7 +736,7 @@ class Package:
             gc.enable()
         return pkg
 
-    def set_dir(self, lkey, path=None, meta=None, update_policy=PackageUpdatePolicy.INCOMING.value):
+    def set_dir(self, lkey, path=None, meta=None, update_policy="incoming"):
         """
         Adds all files from `path` to the package.
 
@@ -770,8 +761,8 @@ class Package:
             When `path` doesn't exist
             ValueError: if the 'update_policy' is not a PackageUpdatePolicy enum value.
         """
-        if not PackageUpdatePolicy.has_value(update_policy):
-            raise ValueError(f"{update_policy} does not exist in PackageUpdatePolicy enum")
+        if update_policy not in PACKAGE_UPDATE_POLICY:
+            raise ValueError(f"{update_policy} is not a valid update policy")
 
         lkey = lkey.strip("/")
 
