@@ -1,44 +1,42 @@
-<!--
-	Used by gitbook to generate docs.quiltdata.com navigation
-	WARNING - changing section names changes docs paths used both
-	within docs and other parts of Quilt, like /catalog
+# Table of contents
 
-	Paths are of the form: word1-word2-word3/bullet-name
-	So, for example: docs.quiltdata.com/get-started/install
-	(all lowercase)
-!-->
-
-# Summary
+* [Introduction](README.md)
 
 ## Get started
-* [Introduction](README.md)
-* [Install](installation.md)
-* [Quick start](quick-start.md)
-* [Work with packages](step-by-step.md)
-* [Articles](articles.md)
-* [Examples](examples.md)
-* [Run a Registry](registries.md)
+
+* [Introduction](get-started/readme.md)
+* [Install](get-started/installation.md)
+* [Quick start](get-started/quick-start.md)
+* [Work with packages](get-started/step-by-step.md)
+* [Articles](get-started/articles.md)
+* [Examples](get-started/examples.md)
+* [Run a Registry](get-started/registries.md)
 
 ## API
-* [Overview](api-overview.md)
-* [Command line](api-cli.md)
-* [Python](api-python.md)
-* [build.yml](buildyml.md)
-* [quilt.yml requirements](quiltyml.md)
-* [Teams](api-teams.md)
-* [R](api-r.md)
+
+* [Overview](api/api-overview.md)
+* [Command line](api/api-cli.md)
+* [Python](api/api-python.md)
+* [build.yml](api/buildyml.md)
+* [quilt.yml requirements](api/quiltyml.md)
+* [Teams](api/api-teams.md)
+* [R](api/api-r.md)
 
 ## Advanced Usage
-* [Environment variables](env.md)
-* [Shared drives](shared-store.md)
-* [Checks](checks.md)
-* [Package composition](compose.md)
-* [PySpark](pyspark.md)
+
+* [Environment variables](advanced-usage/env.md)
+* [Shared drives](advanced-usage/shared-store.md)
+* [Checks](advanced-usage/checks.md)
+* [Package composition](advanced-usage/compose.md)
+* [PySpark](advanced-usage/pyspark.md)
 
 ## Support
-* [FAQ](faq.md)
-* [Contact](contact.md)
+
+* [FAQ](support/faq.md)
+* [Contact](support/contact.md)
 
 ## Developer
-* [Contributing](CONTRIBUTING.md)
-* [Fragment store](repo-format.md)
+
+* [Contributing](developer/contributing.md)
+* [Fragment store](developer/repo-format.md)
+
