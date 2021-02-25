@@ -12,7 +12,7 @@ We will make sure that you have the latest version of Quilt,
 and walk you through the CloudFormation deployment.
 
 We recommend that all users do one or more of the following:
-* [Schedule a Quilt engineer](https://www.meetingbird.com/m/quilt-install)
+* [Schedule a Quilt engineer](https://calendly.com/d/dn2d-8nrc/quilt-installation)
 to guide you through the installation
 
 * [Join Quilt on Slack](https://slack.quiltdata.com/) to ask questions and
