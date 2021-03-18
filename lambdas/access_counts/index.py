@@ -13,6 +13,7 @@ import boto3
 from t4_lambda_shared.utils import sql_escape
 
 ATHENA_DATABASE = os.environ['ATHENA_DATABASE']
+ATHENA_WORKGROUP = os.environ['ATHENA_WORKGROUP']
 # Bucket where CloudTrail logs are located.
 CLOUDTRAIL_BUCKET = os.environ['CLOUDTRAIL_BUCKET']
 # Bucket where query results will be stored.
@@ -283,7 +284,8 @@ def start_query(query_string):
     response = athena.start_query_execution(
         QueryString=query_string,
         QueryExecutionContext=dict(Database=ATHENA_DATABASE),
-        ResultConfiguration=dict(OutputLocation=output)
+        ResultConfiguration=dict(OutputLocation=output),
+        WorkGroup=ATHENA_WORKGROUP,
     )
     print("Started query:", response)
 
