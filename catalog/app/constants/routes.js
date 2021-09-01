@@ -8,6 +8,16 @@ export const home = {
   url: ({ q } = {}) => `/${mkSearch({ q })}`,
 }
 
+export const syncDownload = {
+  path: '/sync-download',
+  url: () => '/sync-download',
+}
+
+export const syncUpload = {
+  path: '/sync-upload',
+  url: () => '/sync-upload',
+}
+
 export const install = {
   path: '/install',
   url: () => '/install',

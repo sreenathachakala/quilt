@@ -20,6 +20,8 @@
     "prebuild": "npm run build:clean",
     "build": "cross-env NODE_ENV=production webpack --config internals/webpack/webpack.prod.js --color --progress",
     "build:clean": "rimraf ./build",
+    "build:desktop": "cross-env NODE_ENV=production webpack --config internals/webpack/webpack.desktop-prod.js --color --progress",
+    "desktop": "cross-env NODE_ENV=development webpack serve --config internals/webpack/webpack.desktop-dev.js",
     "start": "cross-env NODE_ENV=development node server",
     "start:tunnel": "cross-env NODE_ENV=development ENABLE_TUNNEL=true node server",
     "start:production": "npm run test && npm run build && npm run start:prod",
@@ -74,6 +76,7 @@
     "date-fns": "^2.21.1",
     "dedent": "^0.7.0",
     "dompurify": "^2.2.8",
+    "electron": "^13.1.7",
     "express": "^4.17.1",
     "final-form": "^4.20.2",
     "fontfaceobserver": "^2.1.0",
@@ -215,6 +218,7 @@
     "webpack": "^5.42.1",
     "webpack-cli": "^4.7.2",
     "webpack-dev-middleware": "^5.0.0",
+    "webpack-dev-server": "^3.11.2",
     "webpack-hot-middleware": "^2.25.0"
   }
 }

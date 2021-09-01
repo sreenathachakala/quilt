@@ -19,6 +19,7 @@ module.exports = (options) => ({
     // Merge with env dependent settings
     ...options.output,
   },
+  devServer: options.devServer,
   optimization: options.optimization,
   module: {
     rules: [
@@ -121,6 +122,12 @@ module.exports = (options) => ({
       filename: 'embed-debug-harness.html',
       inject: true,
     }),
+    new HtmlWebpackPlugin({
+      chunks: ['desktop'],
+      template: 'app/desktop/index.html',
+      filename: 'desktop.html',
+      inject: true,
+    }),
 
     new ForkTsCheckerWebpackPlugin(),
 
@@ -142,6 +149,6 @@ module.exports = (options) => ({
     },
   },
   devtool: options.devtool,
-  target: 'web', // Make web variables accessible to webpack, e.g. window
+  target: options.target || 'web', // Make web variables accessible to webpack, e.g. window
   performance: options.performance || {},
 })

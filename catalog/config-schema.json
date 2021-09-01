@@ -97,6 +97,11 @@
     "ssoProviders": {
       "type": "string",
       "description": "Space-separated list of SSO providers."
+    },
+    "filesInputExpanded": {
+      "type": "boolean",
+      "default": false,
+      "description": "Are directories expanded by default"
     }
   },
   "required": [

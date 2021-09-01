@@ -75,7 +75,7 @@ function ErrorBoundaryPlaceholder({ error, info, reset }: ErrorBoundaryPlacehold
   }, [error, info, sentry])
 
   return (
-    <Layout bare>
+    <Layout noNavBar>
       <Error headline="Unexpected Error" detail="Something went wrong" />
     </Layout>
   )

@@ -1,12 +1,13 @@
 import cx from 'classnames'
 import * as R from 'ramda'
 import * as React from 'react'
-import { useDropzone, FileWithPath } from 'react-dropzone'
+import { useDropzone } from 'react-dropzone'
 import * as M from '@material-ui/core'
 import * as Lab from '@material-ui/lab'
 import { fade } from '@material-ui/core/styles'
 
 import * as urls from 'constants/urls'
+import * as Config from 'utils/Config'
 import StyledLink from 'utils/StyledLink'
 import assertNever from 'utils/assertNever'
 import dissocBy from 'utils/dissocBy'
@@ -18,6 +19,11 @@ import useMemoEq from 'utils/useMemoEq'
 
 import * as PD from './PackageDialog'
 import * as S3FilePicker from './S3FilePicker'
+
+// `react-dropzone -> file-selector` has `FileWithPath` extended from DOMFile, not just File
+interface FileWithPath extends File {
+  readonly path: string
+}
 
 const COLORS = {
   default: M.colors.grey[900],
@@ -1066,7 +1072,10 @@ function DirUpload({
   delayHashing,
   disableStateDisplay,
 }: DirUploadProps) {
-  const [expanded, setExpanded] = React.useState(false)
+  const { filesInputExpanded } = Config.use()
+  const [expanded, setExpanded] = React.useState(
+    typeof filesInputExpanded === 'boolean' ? filesInputExpanded : true,
+  )
 
   const toggleExpanded = React.useCallback(
     (e) => {
