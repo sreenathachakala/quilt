@@ -6,7 +6,7 @@ import * as Config from 'utils/Config'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import Placeholder from 'components/Placeholder'
 import SyncDownload from 'containers/SyncDownload'
-import SyncHome from 'containers/SyncHome'
+// import SyncHome from 'containers/SyncHome'
 import requireAuth from 'containers/Auth/wrapper'
 import { CatchNotFound, ThrowNotFound } from 'containers/NotFoundPage'
 import { isAdmin } from 'containers/Auth/selectors'
@@ -38,6 +38,8 @@ const AuthSignOut = RT.mkLazy(() => import('containers/Auth/SignOut'), Placehold
 const AuthSignUp = RT.mkLazy(() => import('containers/Auth/SignUp'), Placeholder)
 const Bucket = RT.mkLazy(() => import('containers/Bucket'), Placeholder)
 
+const Landing = RT.mkLazy(() => import('website/pages/Landing'), Placeholder)
+
 export default function App() {
   const cfg = Config.useConfig()
   const protect = React.useMemo(
@@ -53,7 +55,7 @@ export default function App() {
   return (
     <CatchNotFound id={`${l.pathname}${l.search}${l.hash}`}>
       <Switch>
-        <Route path={paths.home} component={protect(SyncHome)} exact />
+        <Route path={paths.home} component={protect(Landing)} exact />
 
         {!cfg.disableNavigator && (
           <Route path={paths.syncDownload} component={protect(SyncDownload)} />

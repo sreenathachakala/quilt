@@ -44,6 +44,10 @@ const useStyles = M.makeStyles((t) => ({
     display: 'flex',
     flexDirection: 'column',
     padding: t.spacing(4),
+    position: 'relative',
+    '&:hover $actions': {
+      display: 'flex',
+    },
   },
   title: {
     ...t.typography.h6,
@@ -95,6 +99,27 @@ const useStyles = M.makeStyles((t) => ({
       background: t.palette.secondary.main,
     },
   },
+  actions: {
+    animation: '$appear .3s ease',
+    bottom: t.spacing(2),
+    display: 'none',
+    justifyContent: 'space-between',
+    left: t.spacing(2),
+    position: 'absolute',
+    right: t.spacing(2),
+  },
+  '@keyframes appear': {
+    '0%': {
+      left: 0,
+      opacity: 0.3,
+      right: 0,
+    },
+    '100%': {
+      left: t.spacing(2),
+      opacity: 1,
+      right: t.spacing(2),
+    },
+  },
 }))
 
 export default React.forwardRef(function BucketGrid(
@@ -133,6 +158,18 @@ export default React.forwardRef(function BucketGrid(
               ))}
             </div>
           )}
+          <div className={classes.actions}>
+            <Link to={urls.bucketDir(b.name)}>
+              <M.Button size="large" variant="contained" color="primary">
+                Download
+              </M.Button>
+            </Link>
+            <Link to={urls.bucketPackageList(b.name)}>
+              <M.Button size="large" variant="contained" color="primary">
+                Upload
+              </M.Button>
+            </Link>
+          </div>
         </div>
       ))}
       {showAddLink && (
