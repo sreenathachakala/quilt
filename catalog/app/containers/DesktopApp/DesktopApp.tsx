@@ -10,7 +10,7 @@ import SyncHome from 'containers/SyncHome'
 import requireAuth from 'containers/Auth/wrapper'
 import { CatchNotFound, ThrowNotFound } from 'containers/NotFoundPage'
 import { isAdmin } from 'containers/Auth/selectors'
-import { loadable } from 'utils/reactTools'
+import * as RT from 'utils/reactTools'
 import { useLocation } from 'utils/router'
 
 import * as AwsReadiness from './AwsReadiness'
@@ -22,19 +22,21 @@ const redirectTo =
 
 const requireAdmin = (requireAuth as $TSFixMe)({ authorizedSelector: isAdmin })
 
-const mkLazy = (load: $TSFixMe) =>
-  (loadable as $TSFixMe)(load, { fallback: () => <Placeholder /> })
-
-const Admin = mkLazy(() => import('containers/Admin'))
-const AuthActivationError = mkLazy(() => import('containers/Auth/ActivationError'))
-const AuthCode = requireAuth()(mkLazy(() => import('containers/Auth/Code')))
-const AuthPassChange = mkLazy(() => import('containers/Auth/PassChange'))
-const AuthPassReset = mkLazy(() => import('containers/Auth/PassReset'))
-const AuthSSOSignUp = mkLazy(() => import('containers/Auth/SSOSignUp'))
-const AuthSignIn = mkLazy(() => import('containers/Auth/SignIn'))
-const AuthSignOut = mkLazy(() => import('containers/Auth/SignOut'))
-const AuthSignUp = mkLazy(() => import('containers/Auth/SignUp'))
-const Bucket = mkLazy(() => import('containers/Bucket'))
+const Admin = RT.mkLazy(() => import('containers/Admin'), Placeholder)
+const AuthActivationError = RT.mkLazy(
+  () => import('containers/Auth/ActivationError'),
+  Placeholder,
+)
+const AuthCode = requireAuth()(
+  RT.mkLazy(() => import('containers/Auth/Code'), Placeholder),
+)
+const AuthPassChange = RT.mkLazy(() => import('containers/Auth/PassChange'), Placeholder)
+const AuthPassReset = RT.mkLazy(() => import('containers/Auth/PassReset'), Placeholder)
+const AuthSSOSignUp = RT.mkLazy(() => import('containers/Auth/SSOSignUp'), Placeholder)
+const AuthSignIn = RT.mkLazy(() => import('containers/Auth/SignIn'), Placeholder)
+const AuthSignOut = RT.mkLazy(() => import('containers/Auth/SignOut'), Placeholder)
+const AuthSignUp = RT.mkLazy(() => import('containers/Auth/SignUp'), Placeholder)
+const Bucket = RT.mkLazy(() => import('containers/Bucket'), Placeholder)
 
 export default function App() {
   const cfg = Config.useConfig()
