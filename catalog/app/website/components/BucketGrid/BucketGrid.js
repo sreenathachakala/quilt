@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import * as M from '@material-ui/core'
 import { fade } from '@material-ui/core/styles'
 
+import * as Config from 'utils/Config'
 import * as NamedRoutes from 'utils/NamedRoutes'
 
 const useStyles = M.makeStyles((t) => ({
@@ -126,6 +127,7 @@ export default React.forwardRef(function BucketGrid(
   { buckets, onTagClick, tagIsMatching = () => false, showAddLink = false },
   ref,
 ) {
+  const cfg = Config.useConfig()
   const classes = useStyles()
   const { urls } = NamedRoutes.use()
   return (
@@ -158,18 +160,20 @@ export default React.forwardRef(function BucketGrid(
               ))}
             </div>
           )}
-          <div className={classes.actions}>
-            <Link to={urls.bucketDir(b.name)}>
-              <M.Button size="large" variant="contained" color="primary">
-                Download
-              </M.Button>
-            </Link>
-            <Link to={urls.bucketPackageList(b.name)}>
-              <M.Button size="large" variant="contained" color="primary">
-                Upload
-              </M.Button>
-            </Link>
-          </div>
+          {cfg.desktop && (
+            <div className={classes.actions}>
+              <Link to={urls.bucketDir(b.name)}>
+                <M.Button size="large" variant="contained" color="primary">
+                  Download
+                </M.Button>
+              </Link>
+              <Link to={urls.bucketPackageList(b.name)}>
+                <M.Button size="large" variant="contained" color="primary">
+                  Upload
+                </M.Button>
+              </Link>
+            </div>
+          )}
         </div>
       ))}
       {showAddLink && (

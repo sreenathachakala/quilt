@@ -175,7 +175,7 @@ export default function Dir({
 }: RRDom.RouteComponentProps<DirParams>) {
   const classes = useStyles()
   const { urls } = NamedRoutes.use<RouteMap>()
-  const { noDownload } = Config.use()
+  const { desktop, noDownload } = Config.use()
   const s3 = AWS.S3.use()
   const preferences = BucketPreferences.use()
   const { prefix } = parseSearch(l.search)
@@ -240,6 +240,8 @@ export default function Dir({
     )
   }, [data.result])
 
+  const [localFolder, setLocalFolder] = React.useState(false)
+
   return (
     <M.Box pt={2} pb={4}>
       <MetaTitle>{[path || 'Files', bucket]}</MetaTitle>
@@ -254,14 +256,37 @@ export default function Dir({
             Create package from directory
           </CopyButton>
         )}
-        {!noDownload && (
+        {!noDownload && !desktop && (
           <FileView.ZipDownloadForm
             className={classes.button}
             suffix={`dir/${bucket}/${path}`}
             label="Download directory"
           />
         )}
+        {!noDownload && !!desktop && (
+          <FileView.DownloadButtonLayout
+            className={classes.button}
+            label="Download directory"
+            icon="archive"
+            type="submit"
+            onClick={() => setLocalFolder(true)}
+          />
+        )}
       </M.Box>
+
+      <M.Collapse in={localFolder}>
+        <M.Paper style={{ marginBottom: '16px', padding: '16px' }}>
+          <M.TextField
+            style={{ width: '100%' }}
+            disabled={false}
+            helperText="Click to set local folder with your file browser"
+            id="localPath"
+            label="Path to local folder"
+            onClick={() => {}}
+            value=""
+          />
+        </M.Paper>
+      </M.Collapse>
 
       <Code gutterBottom>{code}</Code>
 

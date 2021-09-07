@@ -94,6 +94,7 @@ export function ZipDownloadForm({ className, suffix, label, newTab = false }) {
   const { s3Proxy, noDownload } = Config.use()
   const { token } = redux.useSelector(Auth.selectors.tokens) || {}
   if (!token || noDownload) return null
+
   const action = `${s3Proxy}/zip/${suffix}`
   return (
     <form
