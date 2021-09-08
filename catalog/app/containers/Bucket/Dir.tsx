@@ -172,6 +172,7 @@ function LocalFolderInput({ onChange, open, value }: LocalFolderInputProps) {
       extraSummary={null}
       heading="Local folder"
       defaultExpanded={open}
+      gutterBottom
     >
       <M.TextField
         fullWidth
