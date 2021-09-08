@@ -14,10 +14,12 @@ import { useData } from 'utils/Data'
 import MetaTitle from 'utils/MetaTitle'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import * as BucketPreferences from 'utils/BucketPreferences'
+import * as IPC from 'utils/electron-ipc'
 import parseSearch from 'utils/parseSearch'
 import { getBreadCrumbs, ensureNoSlash, withoutPrefix, up, decode } from 'utils/s3paths'
 import type * as workflows from 'utils/workflows'
 
+import Section from './Section'
 import Code from './Code'
 import CopyButton from './CopyButton'
 import * as FileView from './FileView'
@@ -148,6 +150,81 @@ function DirContents({
   )
 }
 
+interface LocalFolderInputProps {
+  onChange: (path: string) => void
+  open: boolean
+  value: string | null
+}
+
+function LocalFolderInput({ onChange, open, value }: LocalFolderInputProps) {
+  const ipc = IPC.use()
+
+  const handleClick = React.useCallback(async () => {
+    const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
+    if (!newLocalPath) return
+    onChange(newLocalPath)
+    // storage.set(STORAGE_KEYS.LOCAL_PATH, newLocalPath)
+  }, [ipc, onChange])
+
+  return (
+    <Section
+      icon={<M.Icon>folder_open</M.Icon>}
+      extraSummary={null}
+      heading="Local folder"
+      defaultExpanded={open}
+    >
+      <M.TextField
+        fullWidth
+        size="small"
+        disabled={false}
+        helperText="Click to set local folder with your file browser"
+        id="localPath"
+        label="Path to local folder"
+        onClick={handleClick}
+        value={value}
+      />
+    </Section>
+  )
+}
+
+interface DownloadDirectoryButtonProps {
+  bucket: string
+  className: string
+  onClick: () => void
+  path?: string
+}
+
+function DownloadDirectoryButton({
+  className,
+  bucket,
+  onClick,
+  path,
+}: DownloadDirectoryButtonProps) {
+  const { desktop, noDownload } = Config.use()
+
+  if (noDownload) return null
+
+  if (desktop) {
+    return (
+      <FileView.DownloadButtonLayout
+        className={className}
+        label="Download directory"
+        icon="archive"
+        type="submit"
+        onClick={onClick}
+      />
+    )
+  }
+
+  return (
+    <FileView.ZipDownloadForm
+      className={className}
+      suffix={`dir/${bucket}/${path}`}
+      label="Download directory"
+    />
+  )
+}
+
 const useStyles = M.makeStyles((t) => ({
   crumbs: {
     ...t.typography.body1,
@@ -175,7 +252,6 @@ export default function Dir({
 }: RRDom.RouteComponentProps<DirParams>) {
   const classes = useStyles()
   const { urls } = NamedRoutes.use<RouteMap>()
-  const { desktop, noDownload } = Config.use()
   const s3 = AWS.S3.use()
   const preferences = BucketPreferences.use()
   const { prefix } = parseSearch(l.search)
@@ -240,7 +316,8 @@ export default function Dir({
     )
   }, [data.result])
 
-  const [localFolder, setLocalFolder] = React.useState(false)
+  const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
+  const [localFolder, setLocalFolder] = React.useState('')
 
   return (
     <M.Box pt={2} pb={4}>
@@ -256,37 +333,19 @@ export default function Dir({
             Create package from directory
           </CopyButton>
         )}
-        {!noDownload && !desktop && (
-          <FileView.ZipDownloadForm
-            className={classes.button}
-            suffix={`dir/${bucket}/${path}`}
-            label="Download directory"
-          />
-        )}
-        {!noDownload && !!desktop && (
-          <FileView.DownloadButtonLayout
-            className={classes.button}
-            label="Download directory"
-            icon="archive"
-            type="submit"
-            onClick={() => setLocalFolder(true)}
-          />
-        )}
+        <DownloadDirectoryButton
+          className={classes.button}
+          bucket={bucket}
+          path={path}
+          onClick={() => setExpandedLocalFolder(true)}
+        />
       </M.Box>
 
-      <M.Collapse in={localFolder}>
-        <M.Paper style={{ marginBottom: '16px', padding: '16px' }}>
-          <M.TextField
-            style={{ width: '100%' }}
-            disabled={false}
-            helperText="Click to set local folder with your file browser"
-            id="localPath"
-            label="Path to local folder"
-            onClick={() => {}}
-            value=""
-          />
-        </M.Paper>
-      </M.Collapse>
+      <LocalFolderInput
+        open={expandedLocalFolder}
+        onChange={setLocalFolder}
+        value={localFolder}
+      />
 
       <Code gutterBottom>{code}</Code>
 
