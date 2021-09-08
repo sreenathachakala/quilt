@@ -6,6 +6,7 @@ import * as React from 'react'
 import * as RRDom from 'react-router-dom'
 import * as M from '@material-ui/core'
 
+import Mono from 'components/Code'
 import { Crumb, copyWithoutSpaces, render as renderCrumbs } from 'components/BreadCrumbs'
 import AsyncResult from 'utils/AsyncResult'
 import * as AWS from 'utils/AWS'
@@ -16,7 +17,14 @@ import * as NamedRoutes from 'utils/NamedRoutes'
 import * as BucketPreferences from 'utils/BucketPreferences'
 import * as IPC from 'utils/electron-ipc'
 import parseSearch from 'utils/parseSearch'
-import { getBreadCrumbs, ensureNoSlash, withoutPrefix, up, decode } from 'utils/s3paths'
+import {
+  getBreadCrumbs,
+  ensureNoSlash,
+  parseS3Url,
+  withoutPrefix,
+  up,
+  decode,
+} from 'utils/s3paths'
 import type * as workflows from 'utils/workflows'
 
 import Section from './Section'
@@ -147,6 +155,43 @@ function DirContents({
       />
       <Summary files={response.files} mkUrl={null} />
     </>
+  )
+}
+
+interface ConfirmDownloadDialogProps {
+  localPath: string
+  onClose: () => void
+  open: boolean
+  remotePath: string
+}
+
+function ConfirmDownloadDialog({
+  localPath,
+  onClose,
+  open,
+  remotePath,
+}: ConfirmDownloadDialogProps) {
+  const ipc = IPC.use()
+  const handleCancel = React.useCallback(() => {
+    onClose()
+  }, [onClose])
+  const handleConfirm = React.useCallback(async () => {
+    await ipc.invoke(IPC.EVENTS.SYNC_DOWNLOAD, [parseS3Url(remotePath)], localPath)
+    onClose()
+  }, [ipc, localPath, onClose, remotePath])
+  return (
+    <M.Dialog open={open}>
+      <M.DialogTitle>Confirm download</M.DialogTitle>
+      <M.DialogContent>
+        From <Mono>{remotePath}</Mono> to <Mono>{localPath}</Mono>
+      </M.DialogContent>
+      <M.DialogActions>
+        <M.Button onClick={handleCancel}>Cancel</M.Button>
+        <M.Button color="primary" onClick={handleConfirm} variant="contained">
+          Download
+        </M.Button>
+      </M.DialogActions>
+    </M.Dialog>
   )
 }
 
@@ -343,9 +388,16 @@ export default function Dir({
       </M.Box>
 
       <LocalFolderInput
-        open={expandedLocalFolder}
         onChange={setLocalFolder}
+        open={expandedLocalFolder}
         value={localFolder}
+      />
+
+      <ConfirmDownloadDialog
+        open={!!localFolder && !!expandedLocalFolder}
+        localPath={localFolder}
+        remotePath={`s3://${bucket}/${path}`}
+        onClose={() => setExpandedLocalFolder(false)}
       />
 
       <Code gutterBottom>{code}</Code>
