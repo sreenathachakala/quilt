@@ -48,7 +48,7 @@ export interface FileWithPath extends DOMFile {
 }
 
 interface FileWithWebkitPath extends File {
-    readonly webkitRelativePath?: string;
+    readonly webkitRelativePath: string;
 }
 
 function withMimeType(file: FileWithPath) {
