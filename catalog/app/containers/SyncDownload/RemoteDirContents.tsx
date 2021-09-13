@@ -322,6 +322,7 @@ export default function RemoteDirContents({
         </M.Typography>
       </M.Box>
       <div className={classes.crumbs}>
+        {/* @ts-expect-error, TODO: convert Breadcrumbs to typescript */}
         {renderCrumbs(crumbs, { getLinkProps: getCrumbLinkProps })}
       </div>
       {data.case({

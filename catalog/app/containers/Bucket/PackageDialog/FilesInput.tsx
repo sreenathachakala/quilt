@@ -1095,6 +1095,7 @@ function DirUpload({
 
   const onDrop = React.useCallback(
     (files: FileWithPath[]) => {
+      // TODO: fix File ⟷ DOMFile ⟷ FileWithHash ⟷ FileWithPath interplay
       dispatch(FilesAction.Add({ prefix: path, files: files.map(computeHash) }))
     },
     [dispatch, path],

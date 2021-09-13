@@ -107,7 +107,9 @@ export function useAwsReadiness(): [boolean, AwsPlaceholderState] {
         const { awsInstalled } = await ipc.invoke(IPC.EVENTS.READY)
         setReady(awsInstalled)
       } catch (error) {
-        setReady(error)
+        if (error instanceof Error) {
+          setReady(error)
+        }
       }
     }
     handleReady()
