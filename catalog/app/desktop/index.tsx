@@ -29,7 +29,6 @@ import { BucketCacheProvider } from 'utils/BucketCache'
 import * as Config from 'utils/Config'
 import { createBoundary } from 'utils/ErrorBoundary'
 import * as NamedRoutes from 'utils/NamedRoutes'
-import * as RF from 'utils/ReduxForm'
 import * as Cache from 'utils/ResourceCache'
 import * as Sentry from 'utils/Sentry'
 import * as Store from 'utils/Store'
@@ -143,54 +142,52 @@ const Root = () => (
                       <Sentry.Loader userSelector={sentryUserSelector}>
                         <GraphQLProvider>
                           <ErrorBoundary>
-                            <RF.Provider>
-                              <Notifications.Provider>
-                                <APIConnector.Provider
-                                  fetch={fetch}
-                                  middleware={[Auth.apiMiddleware]}
+                            <Notifications.Provider>
+                              <APIConnector.Provider
+                                fetch={fetch}
+                                middleware={[Auth.apiMiddleware]}
+                              >
+                                <Auth.Provider
+                                  checkOn={LOCATION_CHANGE}
+                                  storage={storage}
                                 >
-                                  <Auth.Provider
-                                    checkOn={LOCATION_CHANGE}
-                                    storage={storage}
+                                  <Intercom.Provider
+                                    userSelector={intercomUserSelector}
+                                    horizontal_padding={
+                                      // align the launcher with the right side of the container
+                                      (window.innerWidth -
+                                        Math.min(1280, window.innerWidth)) /
+                                        2 +
+                                      32
+                                    }
+                                    vertical_padding={59}
                                   >
-                                    <Intercom.Provider
-                                      userSelector={intercomUserSelector}
-                                      horizontal_padding={
-                                        // align the launcher with the right side of the container
-                                        (window.innerWidth -
-                                          Math.min(1280, window.innerWidth)) /
-                                          2 +
-                                        32
-                                      }
-                                      vertical_padding={59}
-                                    >
-                                      <ExperimentsProvider>
-                                        <Tracking.Provider
-                                          locationSelector={selectLocation}
-                                          userSelector={Auth.selectors.username}
-                                        >
-                                          <AWS.Credentials.Provider>
-                                            <AWS.Config.Provider>
-                                              <AWS.Athena.Provider>
-                                                <AWS.S3.Provider>
-                                                  <Notifications.WithNotifications>
-                                                    <ErrorBoundary>
-                                                      <BucketCacheProvider>
-                                                        <DesktopApp />
-                                                      </BucketCacheProvider>
-                                                    </ErrorBoundary>
-                                                  </Notifications.WithNotifications>
-                                                </AWS.S3.Provider>
-                                              </AWS.Athena.Provider>
-                                            </AWS.Config.Provider>
-                                          </AWS.Credentials.Provider>
-                                        </Tracking.Provider>
-                                      </ExperimentsProvider>
-                                    </Intercom.Provider>
-                                  </Auth.Provider>
-                                </APIConnector.Provider>
-                              </Notifications.Provider>
-                            </RF.Provider>
+                                    <ExperimentsProvider>
+                                      <Tracking.Provider
+                                        locationSelector={selectLocation}
+                                        userSelector={Auth.selectors.username}
+                                      >
+                                        <AWS.Credentials.Provider>
+                                          <AWS.Config.Provider>
+                                            <AWS.Athena.Provider>
+                                              <AWS.S3.Provider>
+                                                <Notifications.WithNotifications>
+                                                  <ErrorBoundary>
+                                                    <BucketCacheProvider>
+                                                      <DesktopApp />
+                                                    </BucketCacheProvider>
+                                                  </ErrorBoundary>
+                                                </Notifications.WithNotifications>
+                                              </AWS.S3.Provider>
+                                            </AWS.Athena.Provider>
+                                          </AWS.Config.Provider>
+                                        </AWS.Credentials.Provider>
+                                      </Tracking.Provider>
+                                    </ExperimentsProvider>
+                                  </Intercom.Provider>
+                                </Auth.Provider>
+                              </APIConnector.Provider>
+                            </Notifications.Provider>
                           </ErrorBoundary>
                         </GraphQLProvider>
                       </Sentry.Loader>
