@@ -1,7 +1,7 @@
 import cx from 'classnames'
 import * as R from 'ramda'
 import * as React from 'react'
-import { useDropzone } from 'react-dropzone'
+import { useDropzone, DropEvent } from 'react-dropzone'
 import * as M from '@material-ui/core'
 import * as Lab from '@material-ui/lab'
 import { fade } from '@material-ui/core/styles'
@@ -12,6 +12,7 @@ import StyledLink from 'utils/StyledLink'
 import assertNever from 'utils/assertNever'
 import dissocBy from 'utils/dissocBy'
 import useDragging from 'utils/dragging'
+import * as fileSelector from 'utils/file-selector/file-selector'
 import { withoutPrefix } from 'utils/s3paths'
 import { readableBytes } from 'utils/string'
 import * as tagged from 'utils/taggedV2'
@@ -1095,16 +1096,18 @@ function DirUpload({
 
   const onDrop = React.useCallback(
     (files: FileWithPath[]) => {
-      // TODO: fix File ⟷ DOMFile ⟷ FileWithHash ⟷ FileWithPath interplay
       dispatch(FilesAction.Add({ prefix: path, files: files.map(computeHash) }))
     },
     [dispatch, path],
   )
 
   const { getRootProps, isDragActive } = useDropzone({
-    onDrop,
-    noDragEventsBubbling: true,
+    getFilesFromEvent: fileSelector.fromEvent as (
+      event: DropEvent,
+    ) => Promise<Array<File | DataTransferItem>>,
     noClick: true,
+    noDragEventsBubbling: true,
+    onDrop,
   })
 
   // eslint-disable-next-line consistent-return
@@ -1330,6 +1333,9 @@ export function FilesInput({
 
   const isDragging = useDragging()
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    getFilesFromEvent: fileSelector.fromEvent as (
+      event: DropEvent,
+    ) => Promise<Array<File | DataTransferItem>>,
     disabled,
     onDrop,
   })
