@@ -26,6 +26,7 @@ import {
   up,
   decode,
 } from 'utils/s3paths'
+import mkStorage from 'utils/storage'
 import type * as workflows from 'utils/workflows'
 
 import Section from './Section'
@@ -249,6 +250,13 @@ interface LocalFolderInputProps {
   value: string | null
 }
 
+const STORAGE_KEYS = {
+  LOCAL_FOLDER: 'LOCAL_FOLDER',
+}
+const storage = mkStorage({
+  [STORAGE_KEYS.LOCAL_FOLDER]: STORAGE_KEYS.LOCAL_FOLDER,
+})
+
 function LocalFolderInput({ onChange, open, value }: LocalFolderInputProps) {
   const ipc = IPC.use()
 
@@ -256,7 +264,6 @@ function LocalFolderInput({ onChange, open, value }: LocalFolderInputProps) {
     const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
     if (!newLocalPath) return
     onChange(newLocalPath)
-    // storage.set(STORAGE_KEYS.LOCAL_PATH, newLocalPath)
   }, [ipc, onChange])
 
   return (
@@ -411,7 +418,23 @@ export default function Dir({
   }, [data.result])
 
   const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
-  const [localFolder, setLocalFolder] = React.useState('')
+
+  const [localFolder, setLocalFolder] = React.useState(() => {
+    try {
+      return storage.get(STORAGE_KEYS.LOCAL_FOLDER) || ''
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error)
+      return ''
+    }
+  })
+  const handleLocalFolderChange = React.useCallback(
+    (newLocalPath) => {
+      storage.set(STORAGE_KEYS.LOCAL_FOLDER, newLocalPath)
+      setLocalFolder(newLocalPath)
+    },
+    [setLocalFolder],
+  )
 
   return (
     <M.Box pt={2} pb={4}>
@@ -436,7 +459,7 @@ export default function Dir({
       </M.Box>
 
       <LocalFolderInput
-        onChange={setLocalFolder}
+        onChange={handleLocalFolderChange}
         open={expandedLocalFolder}
         value={localFolder}
       />
