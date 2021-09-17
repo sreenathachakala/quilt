@@ -5,9 +5,10 @@ import pLimit from 'p-limit'
 import * as R from 'ramda'
 import * as React from 'react'
 
-import * as IPC from 'utils/electron-ipc'
 import * as AWS from 'utils/AWS'
+import * as Config from 'utils/Config'
 import dissocBy from 'utils/dissocBy'
+import * as IPC from 'utils/electron-ipc'
 import * as s3paths from 'utils/s3paths'
 import useMemoEq from 'utils/useMemoEq'
 
@@ -106,21 +107,9 @@ async function uploadFileUsingCLI(
   }
 }
 
-async function uploadFile(
-  { s3, ipc }: { ipc: IPC.IPC; s3: S3 },
-  file: LocalFile,
-  handle: { bucket: string; prefix: string; path: string },
-  abortController: AbortController,
-  onProgress: (progress: number) => void,
-): Promise<UploadResult> {
-  if (!ipc) {
-    return uploadFileUsingSDK(s3, file, handle, abortController, onProgress)
-  }
-  return uploadFileUsingCLI(ipc, file, handle, abortController, onProgress)
-}
-
 export function useUploads() {
   const s3 = AWS.S3.use()
+  const cfg = Config.useConfig()
 
   const [uploads, setUploads] = React.useState<UploadsState>({})
   const progress = React.useMemo(() => computeTotalProgress(uploads), [uploads])
@@ -135,6 +124,13 @@ export function useUploads() {
   )
   const reset = React.useCallback(() => setUploads({}), [setUploads])
   const ipc = IPC.use()
+  const uploadFile = React.useMemo(
+    () =>
+      cfg.desktop
+        ? uploadFileUsingCLI.bind(null, ipc)
+        : uploadFileUsingSDK.bind(null, s3),
+    [cfg.desktop, ipc, s3],
+  )
 
   const doUpload = React.useCallback(
     async ({
@@ -156,16 +152,10 @@ export function useUploads() {
         if (entry && entry.file === file) return { ...entry, path }
 
         const promise = limit(() =>
-          uploadFile(
-            { ipc, s3 },
-            file,
-            { bucket, prefix, path },
-            abortController,
-            (loaded) => {
-              if (abortController.signal.aborted) return
-              setUploads(R.assocPath([path, 'progress', 'loaded'], loaded))
-            },
-          ).then(async (data) => {
+          uploadFile(file, { bucket, prefix, path }, abortController, (loaded) => {
+            if (abortController.signal.aborted) return
+            setUploads(R.assocPath([path, 'progress', 'loaded'], loaded))
+          }).then(async (data) => {
             if (abortController.signal.aborted) {
               remove(path)
             }
@@ -204,7 +194,7 @@ export function useUploads() {
         R.fromPairs,
       )
     },
-    [ipc, remove, s3, uploads],
+    [remove, uploads, uploadFile],
   )
 
   return useMemoEq(
