@@ -46,7 +46,14 @@ interface Credentials {
   sessionToken: string
 }
 
-function useIPC() {
+export interface IPC {
+  invoke: typeof invoke
+  off: typeof off
+  on: typeof on
+  send: typeof send
+}
+
+function useIPC(): IPC {
   const { accessKeyId, secretAccessKey, sessionToken }: Credentials =
     AWS.Credentials.use()
   const serializedCredentials = React.useMemo(

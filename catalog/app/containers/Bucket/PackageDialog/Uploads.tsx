@@ -5,6 +5,7 @@ import pLimit from 'p-limit'
 import * as R from 'ramda'
 import * as React from 'react'
 
+import * as IPC from 'utils/electron-ipc'
 import * as AWS from 'utils/AWS'
 import dissocBy from 'utils/dissocBy'
 import * as s3paths from 'utils/s3paths'
@@ -25,7 +26,7 @@ export interface UploadTotalProgress {
 export interface UploadsState {
   [path: string]: {
     file: File
-    upload: S3.ManagedUpload
+    // upload: S3.ManagedUpload
     promise: Promise<UploadResult>
     progress?: { total: number; loaded: number }
   }
@@ -48,6 +49,76 @@ export const computeTotalProgress = (uploads: UploadsState): UploadTotalProgress
     }),
   )
 
+async function uploadFileUsingSDK(
+  s3: S3,
+  file: LocalFile,
+  handle: { bucket: string; prefix: string; path: string },
+  abortController: AbortController,
+  onProgress: (progress: number) => void,
+): Promise<UploadResult> {
+  const upload: S3.ManagedUpload = s3.upload(
+    {
+      Bucket: handle.bucket,
+      Key: `${handle.prefix}/${handle.path}`,
+      Body: file,
+    },
+    {
+      queueSize: 2,
+    },
+  )
+  upload.on('httpUploadProgress', ({ loaded }) => {
+    onProgress(loaded)
+  })
+
+  if (abortController.signal.aborted) {
+    throw new Error('Aborted')
+  }
+
+  try {
+    const uploadP = upload.promise()
+    await file.hash.promise
+    return (await uploadP) as UploadResult
+  } catch (e) {
+    abortController.abort()
+    throw e
+  }
+}
+
+async function uploadFileUsingCLI(
+  ipc: IPC.IPC,
+  file: LocalFile,
+  handle: { bucket: string; prefix: string; path: string },
+  abortController: AbortController,
+  onProgress: (progress: number) => void,
+) {
+  ipc.on(IPC.EVENTS.CLI_OUTPUT, () => onProgress(49))
+
+  try {
+    const result = await ipc.invoke(
+      IPC.EVENTS.SYNC_UPLOAD,
+      [file.path || file.name],
+      `${handle.bucket}.${handle.prefix}.${handle.path}`,
+    )
+    return result
+  } catch (e) {
+    abortController.abort()
+    throw e
+  }
+}
+
+async function uploadFile(
+  { s3, ipc }: { ipc: IPC.IPC; s3: S3 },
+  file: LocalFile,
+  handle: { bucket: string; prefix: string; path: string },
+  abortController: AbortController,
+  onProgress: (progress: number) => void,
+): Promise<UploadResult> {
+  if (!ipc) {
+    return uploadFileUsingSDK(s3, file, handle, abortController, onProgress)
+  }
+  return uploadFileUsingCLI(ipc, file, handle, abortController, onProgress)
+}
+
 export function useUploads() {
   const s3 = AWS.S3.use()
 
@@ -63,6 +134,7 @@ export function useUploads() {
     [setUploads],
   )
   const reset = React.useCallback(() => setUploads({}), [setUploads])
+  const ipc = IPC.use()
 
   const doUpload = React.useCallback(
     async ({
@@ -77,42 +149,30 @@ export function useUploads() {
       getMeta?: (path: string) => object | undefined
     }) => {
       const limit = pLimit(2)
-      let rejected = false
+      const abortController = new AbortController()
       const uploadStates = files.map(({ path, file }) => {
         // reuse state if file hasnt changed
         const entry = uploads[path]
         if (entry && entry.file === file) return { ...entry, path }
 
-        const upload: S3.ManagedUpload = s3.upload(
-          {
-            Bucket: bucket,
-            Key: `${prefix}/${path}`,
-            Body: file,
-          },
-          {
-            queueSize: 2,
-          },
+        const promise = limit(() =>
+          uploadFile(
+            { ipc, s3 },
+            file,
+            { bucket, prefix, path },
+            abortController,
+            (loaded) => {
+              if (abortController.signal.aborted) return
+              setUploads(R.assocPath([path, 'progress', 'loaded'], loaded))
+            },
+          ).then(async (data) => {
+            if (abortController.signal.aborted) {
+              remove(path)
+            }
+            return data
+          }),
         )
-        upload.on('httpUploadProgress', ({ loaded }) => {
-          if (rejected) return
-          setUploads(R.assocPath([path, 'progress', 'loaded'], loaded))
-        })
-        const promise = limit(async () => {
-          if (rejected) {
-            remove(path)
-            return undefined
-          }
-          try {
-            const uploadP = upload.promise()
-            await file.hash.promise
-            return await uploadP
-          } catch (e) {
-            rejected = true
-            remove(path)
-            throw e
-          }
-        }) as Promise<UploadResult>
-        return { path, file, upload, promise, progress: { total: file.size, loaded: 0 } }
+        return { path, file, promise, progress: { total: file.size, loaded: 0 } }
       })
 
       FP.function.pipe(
@@ -144,7 +204,7 @@ export function useUploads() {
         R.fromPairs,
       )
     },
-    [remove, s3, uploads],
+    [ipc, remove, s3, uploads],
   )
 
   return useMemoEq(
