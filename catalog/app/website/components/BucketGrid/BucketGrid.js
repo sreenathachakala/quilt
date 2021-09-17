@@ -101,24 +101,27 @@ const useStyles = M.makeStyles((t) => ({
     },
   },
   actions: {
+    alignItems: 'center',
     animation: '$appear .3s ease',
-    bottom: t.spacing(2),
+    background:
+      'linear-gradient(to top, rgba(31, 33, 81, 0.9) 0%, 90%, rgba(31, 33, 81, 0.1) 100%)',
+    bottom: 0,
     display: 'none',
     justifyContent: 'space-between',
-    left: t.spacing(2),
+    left: 0,
+    padding: t.spacing(2),
     position: 'absolute',
-    right: t.spacing(2),
+    right: 0,
+    top: '50%',
   },
   '@keyframes appear': {
     '0%': {
-      left: 0,
       opacity: 0.3,
-      right: 0,
+      padding: t.spacing(2, 0),
     },
     '100%': {
-      left: t.spacing(2),
       opacity: 1,
-      right: t.spacing(2),
+      padding: t.spacing(2),
     },
   },
 }))
