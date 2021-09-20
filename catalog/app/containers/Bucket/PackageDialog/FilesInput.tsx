@@ -12,7 +12,7 @@ import StyledLink from 'utils/StyledLink'
 import assertNever from 'utils/assertNever'
 import dissocBy from 'utils/dissocBy'
 import useDragging from 'utils/dragging'
-import * as fileSelector from 'utils/file-selector/file-selector'
+import * as fileSelector from 'file-selector'
 import { withoutPrefix } from 'utils/s3paths'
 import { readableBytes } from 'utils/string'
 import * as tagged from 'utils/taggedV2'
@@ -1057,6 +1057,40 @@ function FileUpload({
   )
 }
 
+function prepareFileForElectron(file: File) {
+  Object.defineProperty(file, 'originalPath', {
+    value: file.path,
+    writable: false,
+    configurable: false,
+    enumerable: true,
+  })
+
+  Object.defineProperty(file, 'path', {
+    value: null,
+    writable: true,
+    configurable: true,
+    enumerable: true,
+  })
+}
+
+function getFilesFromEvent(event: Event): Promise<Array<File | DataTransferItem>> {
+  const { files } = event.target as HTMLInputElement
+  if (files) {
+    for (let i = 0; i < files.length; i++) {
+      prepareFileForElectron(files[i])
+    }
+  }
+  const { dataTransfer } = event as DragEvent
+  if (dataTransfer as DataTransfer) {
+    for (let j = 0; j < (dataTransfer?.files?.length || 0); j++) {
+      if (dataTransfer?.files[j]) {
+        prepareFileForElectron(dataTransfer?.files[j])
+      }
+    }
+  }
+  return fileSelector.fromEvent(event) as Promise<Array<File | DataTransferItem>>
+}
+
 type DirUploadProps = tagged.ValueOf<typeof FilesEntry.Dir> & {
   prefix?: string
   dispatch: DispatchFilesAction
@@ -1102,7 +1136,7 @@ function DirUpload({
   )
 
   const { getRootProps, isDragActive } = useDropzone({
-    getFilesFromEvent: fileSelector.fromEvent as (
+    getFilesFromEvent: getFilesFromEvent as (
       event: DropEvent,
     ) => Promise<Array<File | DataTransferItem>>,
     noClick: true,
@@ -1333,7 +1367,7 @@ export function FilesInput({
 
   const isDragging = useDragging()
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    getFilesFromEvent: fileSelector.fromEvent as (
+    getFilesFromEvent: getFilesFromEvent as (
       event: DropEvent,
     ) => Promise<Array<File | DataTransferItem>>,
     disabled,
