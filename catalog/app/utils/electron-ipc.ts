@@ -40,6 +40,8 @@ export function send(channel: EVENTS, ...args: any[]) {
   ipcRenderer.send(channel, ...args)
 }
 
+const removeAllListeners = ipcRenderer.removeAllListeners
+
 interface Credentials {
   accessKeyId: string
   secretAccessKey: string
@@ -50,6 +52,7 @@ export interface IPC {
   invoke: typeof invoke
   off: typeof off
   on: typeof on
+  removeAllListeners: typeof removeAllListeners
   send: typeof send
 }
 
@@ -70,6 +73,7 @@ function useIPC(): IPC {
       on,
       invoke: (channel: EVENTS, ...args: any[]) =>
         invoke(channel, serializedCredentials, ...args),
+      removeAllListeners,
       send,
     }),
     [serializedCredentials],
