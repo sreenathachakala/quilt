@@ -20,6 +20,15 @@ export function toFileWithPath(file: FileWithPath, path?: string): FileWithPath 
     // HACK: make behaviour identical in Electron
     // if (typeof f.path !== 'string') { // on electron, path is already set to the absolute path
         const {webkitRelativePath} = file as FileWithWebkitPath;
+        if (typeof f.path === 'string') { // on electron, path is already set to the absolute path
+            // HACK: add Electron's original path
+            Object.defineProperty(f, 'originalPath', {
+                value: f.path,
+                writable: false,
+                configurable: false,
+                enumerable: true
+            })
+        }
         Object.defineProperty(f, 'path', {
             value: typeof path === 'string'
                 ? path
