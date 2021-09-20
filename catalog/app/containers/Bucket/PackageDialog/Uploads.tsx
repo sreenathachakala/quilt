@@ -97,8 +97,8 @@ async function uploadFileUsingCLI(
   try {
     const result = await ipc.invoke(
       IPC.EVENTS.SYNC_UPLOAD,
-      [file.path || file.name],
-      `${handle.bucket}.${handle.prefix}.${handle.path}`,
+      (file as any).originalPath as string,
+      `s3://${handle.bucket}/${handle.prefix}/${handle.path}`,
     )
     return result
   } catch (e) {
@@ -124,12 +124,13 @@ export function useUploads() {
   )
   const reset = React.useCallback(() => setUploads({}), [setUploads])
   const ipc = IPC.use()
+  const isElectronApp = React.useMemo(() => cfg.desktop && false, [cfg.desktop])
   const uploadFile = React.useMemo(
     () =>
-      cfg.desktop
+      isElectronApp
         ? uploadFileUsingCLI.bind(null, ipc)
         : uploadFileUsingSDK.bind(null, s3),
-    [cfg.desktop, ipc, s3],
+    [isElectronApp, ipc, s3],
   )
 
   const doUpload = React.useCallback(
