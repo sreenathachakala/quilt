@@ -8,7 +8,7 @@ import * as React from 'react'
 import * as AWS from 'utils/AWS'
 import * as Config from 'utils/Config'
 import dissocBy from 'utils/dissocBy'
-import * as IPC from 'utils/electron-ipc'
+import * as IPC from 'utils/electron/ipc-provider'
 import * as s3paths from 'utils/s3paths'
 import useMemoEq from 'utils/useMemoEq'
 

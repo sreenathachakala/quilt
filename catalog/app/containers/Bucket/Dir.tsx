@@ -16,7 +16,7 @@ import { useData } from 'utils/Data'
 import MetaTitle from 'utils/MetaTitle'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import * as BucketPreferences from 'utils/BucketPreferences'
-import * as IPC from 'utils/electron-ipc'
+import * as IPC from 'utils/electron/ipc-provider'
 import parseSearch from 'utils/parseSearch'
 import {
   getBreadCrumbs,

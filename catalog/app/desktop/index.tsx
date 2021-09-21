@@ -32,6 +32,8 @@ import * as NamedRoutes from 'utils/NamedRoutes'
 import * as Cache from 'utils/ResourceCache'
 import * as Sentry from 'utils/Sentry'
 import * as Store from 'utils/Store'
+import * as IPC from 'utils/electron/ipc'
+import { Provider as IPCProvider } from 'utils/electron/ipc-provider'
 import fontLoader from 'utils/fontLoader'
 import RouterProvider, { LOCATION_CHANGE, selectLocation } from 'utils/router'
 import mkStorage from 'utils/storage'
@@ -123,6 +125,7 @@ const sentryUserSelector = (state: $TSFixMe) => {
   return u ? { username: u.current_user, email: u.email } : {}
 }
 
+// FIXME: add `desktop: true` here
 const configUrl =
   process.env.NODE_ENV === 'development'
     ? '/config.json'
@@ -141,54 +144,56 @@ const Root = () => (
                     <React.Suspense fallback={<Placeholder />}>
                       <Sentry.Loader userSelector={sentryUserSelector}>
                         <GraphQLProvider>
-                          <ErrorBoundary>
-                            <Notifications.Provider>
-                              <APIConnector.Provider
-                                fetch={fetch}
-                                middleware={[Auth.apiMiddleware]}
-                              >
-                                <Auth.Provider
-                                  checkOn={LOCATION_CHANGE}
-                                  storage={storage}
+                          <IPCProvider value={IPC}>
+                            <ErrorBoundary>
+                              <Notifications.Provider>
+                                <APIConnector.Provider
+                                  fetch={fetch}
+                                  middleware={[Auth.apiMiddleware]}
                                 >
-                                  <Intercom.Provider
-                                    userSelector={intercomUserSelector}
-                                    horizontal_padding={
-                                      // align the launcher with the right side of the container
-                                      (window.innerWidth -
-                                        Math.min(1280, window.innerWidth)) /
-                                        2 +
-                                      32
-                                    }
-                                    vertical_padding={59}
+                                  <Auth.Provider
+                                    checkOn={LOCATION_CHANGE}
+                                    storage={storage}
                                   >
-                                    <ExperimentsProvider>
-                                      <Tracking.Provider
-                                        locationSelector={selectLocation}
-                                        userSelector={Auth.selectors.username}
-                                      >
-                                        <AWS.Credentials.Provider>
-                                          <AWS.Config.Provider>
-                                            <AWS.Athena.Provider>
-                                              <AWS.S3.Provider>
-                                                <Notifications.WithNotifications>
-                                                  <ErrorBoundary>
-                                                    <BucketCacheProvider>
-                                                      <DesktopApp />
-                                                    </BucketCacheProvider>
-                                                  </ErrorBoundary>
-                                                </Notifications.WithNotifications>
-                                              </AWS.S3.Provider>
-                                            </AWS.Athena.Provider>
-                                          </AWS.Config.Provider>
-                                        </AWS.Credentials.Provider>
-                                      </Tracking.Provider>
-                                    </ExperimentsProvider>
-                                  </Intercom.Provider>
-                                </Auth.Provider>
-                              </APIConnector.Provider>
-                            </Notifications.Provider>
-                          </ErrorBoundary>
+                                    <Intercom.Provider
+                                      userSelector={intercomUserSelector}
+                                      horizontal_padding={
+                                        // align the launcher with the right side of the container
+                                        (window.innerWidth -
+                                          Math.min(1280, window.innerWidth)) /
+                                          2 +
+                                        32
+                                      }
+                                      vertical_padding={59}
+                                    >
+                                      <ExperimentsProvider>
+                                        <Tracking.Provider
+                                          locationSelector={selectLocation}
+                                          userSelector={Auth.selectors.username}
+                                        >
+                                          <AWS.Credentials.Provider>
+                                            <AWS.Config.Provider>
+                                              <AWS.Athena.Provider>
+                                                <AWS.S3.Provider>
+                                                  <Notifications.WithNotifications>
+                                                    <ErrorBoundary>
+                                                      <BucketCacheProvider>
+                                                        <DesktopApp />
+                                                      </BucketCacheProvider>
+                                                    </ErrorBoundary>
+                                                  </Notifications.WithNotifications>
+                                                </AWS.S3.Provider>
+                                              </AWS.Athena.Provider>
+                                            </AWS.Config.Provider>
+                                          </AWS.Credentials.Provider>
+                                        </Tracking.Provider>
+                                      </ExperimentsProvider>
+                                    </Intercom.Provider>
+                                  </Auth.Provider>
+                                </APIConnector.Provider>
+                              </Notifications.Provider>
+                            </ErrorBoundary>
+                          </IPCProvider>
                         </GraphQLProvider>
                       </Sentry.Loader>
                     </React.Suspense>

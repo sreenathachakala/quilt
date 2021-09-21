@@ -8,7 +8,7 @@ import Code from 'components/Code'
 import Layout from 'components/Layout'
 import * as S3FilePicker from 'containers/Bucket/PackageDialog/S3FilePicker'
 import * as BucketConfig from 'utils/BucketConfig'
-import * as IPC from 'utils/electron-ipc'
+import * as IPC from 'utils/electron/ipc-provider'
 import mkStorage from 'utils/storage'
 
 import ConfirmDialog from './ConfirmDialog'

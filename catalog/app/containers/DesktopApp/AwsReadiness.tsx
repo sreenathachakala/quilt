@@ -5,7 +5,7 @@ import * as Lab from '@material-ui/lab'
 
 import Loading from 'components/Placeholder'
 import StyledLink from 'utils/StyledLink'
-import * as IPC from 'utils/electron-ipc'
+import * as IPC from 'utils/electron/ipc-provider'
 
 interface BrowserStyledLinkProps {
   href: string
