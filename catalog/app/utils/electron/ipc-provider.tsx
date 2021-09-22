@@ -1,4 +1,3 @@
-import * as R from 'ramda'
 import * as React from 'react'
 
 import * as AWS from 'utils/AWS'
@@ -36,24 +35,26 @@ interface SentryProviderProps {
   value: IPC
 }
 
+const serializeCredentials = (credentials: Credentials) => ({
+  accessKeyId: credentials.accessKeyId,
+  secretAccessKey: credentials.secretAccessKey,
+  sessionToken: credentials.sessionToken,
+})
+
 export const Provider = function SentryProvider({
   children,
   value: { off, on, invoke, send },
 }: SentryProviderProps) {
   const credentials: Credentials = AWS.Credentials.use()
-  const serializedCredentials = React.useMemo(
-    () => R.pick(['accessKeyId', 'secretAccessKey', 'sessionToken'], credentials),
-    [credentials],
-  )
   const ipc = React.useMemo(
     () => ({
       off,
       on,
       invoke: (channel: string, ...args: any[]) =>
-        invoke(channel, serializedCredentials, ...args),
+        invoke(channel, serializeCredentials(credentials), ...args),
       send,
     }),
-    [serializedCredentials, on, off, send, invoke],
+    [credentials, on, off, send, invoke],
   )
   return <Ctx.Provider value={ipc}>{children}</Ctx.Provider>
 }
