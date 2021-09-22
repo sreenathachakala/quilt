@@ -91,20 +91,36 @@ const ErrorBoundary = createBoundary(
 )
 
 // error gets automatically logged to the console, so no need to do it explicitly
-const FinalBoundary = createBoundary(() => (/* error, info */) => (
-  <h1
-    style={{
-      alignItems: 'center',
-      color: '#fff',
-      display: 'flex',
-      height: '90vh',
-      justifyContent: 'center',
-      maxHeight: '600px',
-    }}
-  >
-    Something went wrong
-  </h1>
-))
+const FinalBoundary = createBoundary(() => (/* error, info */) => {
+  const handleReset = () => {
+    localStorage.remove('HOST')
+    window.location.reload()
+  }
+  return (
+    <>
+      <h1
+        style={{
+          alignItems: 'center',
+          color: '#fff',
+          display: 'flex',
+          height: '90vh',
+          justifyContent: 'center',
+          maxHeight: '600px',
+        }}
+      >
+        Something went wrong
+      </h1>
+      <M.Button
+        color="secondary"
+        onClick={handleReset}
+        style={{ margin: 'auto', display: 'flex' }}
+        variant="outlined"
+      >
+        Reset Stack settings
+      </M.Button>
+    </>
+  )
+})
 
 const history = createHistory()
 const MOUNT_NODE = document.getElementById('app')
