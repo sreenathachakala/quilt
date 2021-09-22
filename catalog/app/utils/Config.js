@@ -33,7 +33,7 @@ const parseJSON = (msg = 'invalid JSON') =>
     throw new ConfigError(`${msg}:\n${src}`, { src, originalError: e })
   })
 
-const fetchConfig = async (path) => {
+const fetchConfig = async ({ path, opts = {} }) => {
   try {
     const res = await fetch(path)
     const text = await res.text()
@@ -46,6 +46,7 @@ const fetchConfig = async (path) => {
     return R.pipe(
       parseJSON(`invalid config JSON at "${path}"`),
       validate('Config', `invalid config format at "${path}"`),
+      R.merge(opts),
     )(text)
   } catch (e) {
     if (!(e instanceof ConfigError)) {
@@ -77,8 +78,8 @@ const ConfigResource = Cache.createResource({
 
 const Ctx = React.createContext()
 
-export function ConfigProvider({ path, children }) {
-  return <Ctx.Provider value={path}>{children}</Ctx.Provider>
+export function ConfigProvider({ path, opts, children }) {
+  return <Ctx.Provider value={{ path, opts }}>{children}</Ctx.Provider>
 }
 
 export function useConfig({ suspend = true } = {}) {
