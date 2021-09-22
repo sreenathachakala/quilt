@@ -1,3 +1,4 @@
+import * as R from 'ramda'
 import * as React from 'react'
 
 import * as AWS from 'utils/AWS'
@@ -39,15 +40,10 @@ export const Provider = function SentryProvider({
   children,
   value: { off, on, invoke, send },
 }: SentryProviderProps) {
-  const { accessKeyId, secretAccessKey, sessionToken }: Credentials =
-    AWS.Credentials.use()
+  const credentials: Credentials = AWS.Credentials.use()
   const serializedCredentials = React.useMemo(
-    () => ({
-      accessKeyId,
-      secretAccessKey,
-      sessionToken,
-    }),
-    [accessKeyId, secretAccessKey, sessionToken],
+    () => R.pick(['accessKeyId', 'secretAccessKey', 'sessionToken'], credentials),
+    [credentials],
   )
   const ipc = React.useMemo(
     () => ({
