@@ -4,7 +4,7 @@
 
 ## CLI
 
-## Catalog
+## Catalog, Lambdas
 !-->
 
 # 3.2.1 - 2020-10-14
