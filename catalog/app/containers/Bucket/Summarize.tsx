@@ -20,6 +20,14 @@ import { getBreadCrumbs, getPrefix, withoutPrefix } from 'utils/s3paths'
 import * as requests from './requests'
 import * as errors from './errors'
 
+type SummaryFileTypeShorthand = 'echarts' | 'voila'
+type SummaryFileTypeExtended = {
+  name: SummaryFileTypeShorthand
+  style?: { height: string }
+}
+type SummaryFileType = SummaryFileTypeShorthand | SummaryFileTypeExtended
+type SummaryFileTypes = SummaryFileType[]
+
 interface S3Handle {
   bucket: string
   error?: errors.BucketError
@@ -34,10 +42,37 @@ interface SummarizeFile {
   handle: S3Handle
   path: string
   title?: string
+  types?: SummaryFileTypes
   width?: string | number
 }
 
 type MakeURL = (h: S3Handle) => LocationDescriptor
+
+const useDownloadButtonStyles = M.makeStyles((t) => ({
+  root: {
+    alignItems: 'center',
+    display: 'flex',
+    height: t.spacing(4),
+    justifyContent: 'center',
+    width: t.spacing(3),
+  },
+}))
+
+interface DownloadButtonProps {
+  className?: string
+  handle: S3Handle
+}
+
+function DownloadButton({ className, handle }: DownloadButtonProps) {
+  const classes = useDownloadButtonStyles()
+  return AWS.Signer.withDownloadUrl(handle, (url: string) => (
+    <div className={cx(classes.root, className)}>
+      <M.IconButton href={url} title="Download" download>
+        <M.Icon>arrow_downward</M.Icon>
+      </M.IconButton>
+    </div>
+  ))
+}
 
 enum FileThemes {
   Overview = 'overview',
@@ -78,6 +113,7 @@ const useSectionStyles = M.makeStyles((t) => ({
   },
   heading: {
     ...t.typography.h6,
+    display: 'flex',
     lineHeight: 1.75,
     marginBottom: t.spacing(1),
     [t.breakpoints.up('sm')]: {
@@ -87,19 +123,34 @@ const useSectionStyles = M.makeStyles((t) => ({
       ...t.typography.h5,
     },
   },
+  headingAction: {
+    marginLeft: 'auto',
+  },
 }))
 
 interface SectionProps extends M.PaperProps {
   description?: React.ReactNode
+  handle?: S3Handle
   heading?: React.ReactNode
 }
 
-export function Section({ heading, description, children, ...props }: SectionProps) {
+export function Section({
+  handle,
+  heading,
+  description,
+  children,
+  ...props
+}: SectionProps) {
   const ft = React.useContext(FileThemeContext)
   const classes = useSectionStyles()
   return (
     <M.Paper className={cx(classes.root, classes[ft])} {...props}>
-      {!!heading && <div className={classes.heading}>{heading}</div>}
+      {!!heading && (
+        <div className={classes.heading}>
+          {heading}
+          {handle && <DownloadButton className={classes.headingAction} handle={handle} />}
+        </div>
+      )}
       {!!description && <div className={classes.description}>{description}</div>}
       {children}
     </M.Paper>
@@ -175,21 +226,12 @@ function PreviewBox({ contents, expanded: defaultExpanded = false }: PreviewBoxP
 
 const CrumbLink = M.styled(Link)({ wordBreak: 'break-word' })
 
-interface FilePreviewProps {
-  description: React.ReactNode
+interface CrumbsProps {
   handle: S3Handle
-  headingOverride: React.ReactNode
-  expanded?: boolean
 }
 
-export function FilePreview({
-  description,
-  handle,
-  headingOverride,
-  expanded,
-}: FilePreviewProps) {
+function Crumbs({ handle }: CrumbsProps) {
   const { urls } = NamedRoutes.use()
-
   const crumbs = React.useMemo(() => {
     const all = getBreadCrumbs(handle.key)
     const dirs = R.init(all).map(({ label, path }) => ({
@@ -203,24 +245,41 @@ export function FilePreview({
     return { dirs, file }
   }, [handle.bucket, handle.key, urls])
 
-  const heading =
-    headingOverride != null ? (
-      headingOverride
-    ) : (
-      <span onCopy={copyWithoutSpaces}>
-        {crumbs.dirs.map((c) => (
-          <React.Fragment key={`crumb:${c.to}`}>
-            <CrumbLink {...c} />
-            &nbsp;/{' '}
-          </React.Fragment>
-        ))}
-        <CrumbLink {...crumbs.file} />
-      </span>
-    )
+  return (
+    <span onCopy={copyWithoutSpaces}>
+      {crumbs.dirs.map((c) => (
+        <React.Fragment key={`crumb:${c.to}`}>
+          <CrumbLink {...c} />
+          &nbsp;/{' '}
+        </React.Fragment>
+      ))}
+      <CrumbLink {...crumbs.file} />
+    </span>
+  )
+}
+
+interface FilePreviewProps {
+  expanded?: boolean
+  file?: SummarizeFile
+  handle: S3Handle
+  headingOverride: React.ReactNode
+}
+
+export function FilePreview({
+  expanded,
+  file,
+  handle,
+  headingOverride,
+}: FilePreviewProps) {
+  const description = file ? <Markdown data={file.description} /> : null
+  const heading = headingOverride != null ? headingOverride : <Crumbs handle={handle} />
+
+  const key = handle.logicalKey || handle.key
+  const props = React.useMemo(() => Preview.getRenderProps(key, file), [key, file])
 
   // TODO: check for glacier and hide items
   return (
-    <Section description={description} heading={heading}>
+    <Section description={description} heading={heading} handle={handle}>
       {Preview.load(
         handle,
         Preview.display({
@@ -228,7 +287,9 @@ export function FilePreview({
             <PreviewBox {...{ contents, expanded }} />
           ),
           renderProgress: () => <ContentSkel />,
+          props,
         }),
+        file,
       )}
     </Section>
   )
@@ -340,9 +401,9 @@ function FileHandle({ file, mkUrl, s3 }: FileHandleProps) {
     <EnsureAvailability s3={s3} handle={file.handle}>
       {() => (
         <FilePreview
-          description={<Markdown data={file.description} />}
           handle={file.handle}
           headingOverride={getHeadingOverride(file, mkUrl)}
+          file={file}
         />
       )}
     </EnsureAvailability>

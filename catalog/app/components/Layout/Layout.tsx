@@ -29,7 +29,7 @@ export function Root({ dark = false, ...props }: RootProps) {
   )
 }
 
-interface LayoutProps {
+export interface LayoutProps {
   noNavBar?: boolean
   noFooter?: boolean
   dark?: boolean

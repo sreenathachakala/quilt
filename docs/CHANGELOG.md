@@ -9,10 +9,24 @@
 
 # unreleased - YYYY-MM-DD
 ## Python API
+* [Added] Declared compatibility with `jsonschema==4.*`.
+
+## Catalog, Lambdas
+* [Changed] `pkgpush` lambda now uses dedicated lambda for hashing files to push larger packages faster from catalog.
 
 ## CLI
 
 ## Catalog, Lambdas
+* [Fixed] Improve upload performance and stability, fix some hashing-related errors ([#2532](https://github.com/quiltdata/quilt/pull/2532))
+* [Added] Echarts renderer ([#2382](https://github.com/quiltdata/quilt/pull/2382))
+* [Added] Set height for `quilt_summarize.json` files ([#2474](https://github.com/quiltdata/quilt/pull/2474))
+* [Added] Add a "transcode" lambda for previewing video files ([#2366](https://github.com/quiltdata/quilt/pull/2366/))
+* [Added] Add object-level metadata editor and move package metadata editor to popup ([#2510](https://github.com/quiltdata/quilt/pull/2510/))
+
+# 3.6.0 - 2021-10-15
+## Python API
+* [Added] Validation of package names with `handle_pattern` in [workflows](advanced-features/workflows.md) config.
+* [Added] Validation of package entries with `entries_schema` in [workflows](advanced-features/workflows.md) config.
 
 # 3.5.0 - 2021-09-07
 ## Python API
@@ -39,6 +53,8 @@
 * [Added] Subpackage download ([#2258](https://github.com/quiltdata/quilt/pull/2258))
 * [Added] Per-bucket deep indexing settings ([#2290](https://github.com/quiltdata/quilt/pull/2290))
 * [Added] Embed: IPC, more debug features, docs ([#2314](https://github.com/quiltdata/quilt/pull/2314))
+* [Added] Download button on Summary page ([#2367](https://github.com/quiltdata/quilt/pull/2367))
+* [Added] Validation of package names and entries, pattern for default package name ([2364](https://github.com/quiltdata/quilt/pull/2364))
 * [Changed] New DataGrid-based file listing UI with arbitrary sorting and filtering ([#2097](https://github.com/quiltdata/quilt/pull/2097))
 * [Changed] Item selection in folder-to-package dialog ([#2122](https://github.com/quiltdata/quilt/pull/2122))
 * [Changed] Don't preview .tif (but keep .tiff), preview .results as plain text ([#2128](https://github.com/quiltdata/quilt/pull/2128))
@@ -54,6 +70,7 @@
 * [Changed] Cachebust revision list request ([#2298](https://github.com/quiltdata/quilt/pull/2298))
 * [Changed] Wrap wide Vega charts with horizontal scroll ([#2304](https://github.com/quiltdata/quilt/pull/2304))
 * [Changed] Unify package creation and update dialogs (support adding S3 files in both) ([#2302](https://github.com/quiltdata/quilt/pull/2302))
+* [Changed] Warmer chart colors ([#2329](https://github.com/quiltdata/quilt/pull/2329), [#2338](https://github.com/quiltdata/quilt/pull/2338))
 * [Fixed] `UnicodeDecodeError` in indexer and pkgselect lambdas ([#2123](https://github.com/quiltdata/quilt/pull/2123))
 * [Fixed] Catch and display package-related errors properly ("no such package" and "bad revision") ([#2160](https://github.com/quiltdata/quilt/pull/2160))
 * [Fixed] Crashing `pkgselect` lambda's folder view on an empty manifest ([#2147](https://github.com/quiltdata/quilt/pull/2147))
@@ -61,6 +78,7 @@
 * [Fixed] Dismiss error page when navigating from it ([#2291](https://github.com/quiltdata/quilt/pull/2291))
 * [Fixed] Avoid crash on non-existent logical keys in pkgselect detail view ([#2307](https://github.com/quiltdata/quilt/pull/2307)
 * [Fixed] Error while rendering a preview inside a package ([#2328](https://github.com/quiltdata/quilt/pull/2328))
+* [FIxed] Bring back missing username at Admin/Users table ([#2339](https://github.com/quiltdata/quilt/pull/2339))
 
 # 3.4.0 - 2021-03-15
 ## Python API
@@ -103,7 +121,7 @@ via OIDC ([#2089](https://github.com/quiltdata/quilt/pull/2089))
 
 # 3.3.0 - 2020-12-08
 ## Python API
-* [Added] Metadata quality API ([#1855](https://github.com/quiltdata/quilt/pull/1874)). For details see this [section](Advanced Features/workflows.md).
+* [Added] Metadata quality API ([#1855](https://github.com/quiltdata/quilt/pull/1874)). For details see this [section](advanced-features/workflows.md).
 * [Changed] Improved formatting of package load progress bar ([#1897](https://github.com/quiltdata/quilt/pull/1897))
 * [Fixed] Crash during load of package manifest with unicode symbols with non-unicode locale set ([#1931](https://github.com/quiltdata/quilt/pull/1931))
 
@@ -155,14 +173,14 @@ via OIDC ([#2089](https://github.com/quiltdata/quilt/pull/2089))
 * [Fixed] Previews not rendering in global search ([#1787](https://github.com/quiltdata/quilt/pull/1787))
 
 # 3.2.0 - 2020-09-08 - Package Registry Refactor
-## Python:
+## Python
 * Refactors local and s3 storage-layer code around a new PackageRegistry base class (to support improved file layouts in future releases)
 * Multi-threaded download for large files, 2X to 5X performance gains when installing packages with large files, especially on larger EC2 instances
 * Package name added to Package.resolve_hash
 * Bugfix: remove package revision by shorthash
 * Performance improvements for build and push
 
-## Catalog & Lambdas:
+## Catalog & Lambdas
 * PDF previews
 * Browse full package contents (no longer limited to 1000 files)
 * Indexing and search package-level metadata
@@ -222,12 +240,12 @@ Python
 * `quilt3 install foo/bar/subdirectory`
 * Bug fixes for CopyObject and other exceptions
 
-# 3.1.10 - 2020-01-29 - 3.1.10
+# 3.1.10 - 2020-01-29
 ## Python Client
 
 - Fix bug introduced in 3.1.9 where uploads fail due to incorrect error checking after a HEAD request to see if an object already exists (#1512)
 
-# 3.1.9 - 2020-01-29 - Release 3.1.9
+# 3.1.9 - 2020-01-29
 ## Python Client
 
 - `quilt3 install` now displays the tophash of the installed package (#1461)
@@ -287,10 +305,10 @@ Python
 * Fix uploads of very large files
 * Remove unnecessary copying during push
 
-# 3.1.4 - 2019-10-17 - Release v3.1.4
+# 3.1.4 - 2019-10-17
 * [`delete_package`](https://docs.quiltdata.com/api-reference/api#delete\_package) for a specific version via `top_hash=`
 
-# 3.1.3 - 2019-10-11 - Release v3.1.3
+# 3.1.3 - 2019-10-11
 - Bug fix: when adding python objects to a package a temporary file would be created and then deleted when the object was pushed, leading to a crash if you tried to push that package again (PR #1264)
 
 # 3.1.2 - 2019-10-11
@@ -404,10 +422,10 @@ Expands and improves documentation for working with Quilt packages.
 - Improved full-text search
 
 # 2.9.3 - 2018-03-20 - Package Composition
-## Compiler:
+## Compiler
 - Allow building packages out of other packages and elements from other packages. A new build-file keyword, `package` inserts a package (or sub-package) as an element in the package being built.
 
-## Catalog:
+## Catalog
 - Upgrade router and other dependencies
 - Display packages by author
 
@@ -447,7 +465,7 @@ Updates to commands and local storage to allow users to connect to different reg
 Fixes a bug in download that prevented retrying failed downloads.
 
 # 2.8.3 - 2018-01-19 - Remove Unneeded Pandas dependency
-#186 introduced an undeclared dependency on Pandas >= 0.21.0 (by catching ParserError during CSV parsing). This release removes that dependency and resolves #291.
+&#35;186 introduced an undeclared dependency on Pandas >= 0.21.0 (by catching ParserError during CSV parsing). This release removes that dependency and resolves #291.
 
 # 2.8.2 - 2018-01-17 - Hotfix for several quilt commands
 PR https://github.com/quiltdata/quilt/pull/290

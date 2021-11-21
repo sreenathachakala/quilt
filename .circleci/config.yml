@@ -23,6 +23,9 @@ executors:
   python-39:
     docker:
       - image: cimg/python:3.9
+  python-310:
+    docker:
+      - image: cimg/python:3.10
   python: python-36
 
 commands:
@@ -63,7 +66,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            pip install 'pylint==2.9' 'pycodestyle>=2.6.0a1'
+            pip install 'pylint==2.10.2' 'pycodestyle>=2.6.0a1'
       - run:
           name: Run pylint
           command: |
@@ -146,7 +149,7 @@ jobs:
       - setup-venv
       - run:
           name: install deps
-          command: pip install api/python nbconvert git+https://github.com/quiltdata/pydoc-markdown.git@quilt
+          command: pip install PyYAML~=5.4.1 api/python nbconvert git+https://github.com/quiltdata/pydoc-markdown.git@quilt
       - run:
           name: generate docs
           command: cd gendocs && python build.py
@@ -191,7 +194,7 @@ jobs:
   test-catalog:
     executor:
       name: node/default
-      tag: "current"
+      tag: "16.11"
     steps:
       - checkout
       - node/install-packages:
@@ -223,6 +226,7 @@ workflows:
                 - python-37
                 - python-38
                 - python-39
+                - python-310
           filters:
             <<: *release-tags
       - test-client:
@@ -241,8 +245,10 @@ workflows:
                 - preview
                 - s3select
                 - thumbnail
+                - transcode
                 - pkgselect
                 - shared
+                - s3hash
                 - pkgevents
                 - pkgpush
       - test-lambda:

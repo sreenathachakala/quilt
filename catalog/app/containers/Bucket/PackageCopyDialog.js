@@ -59,7 +59,7 @@ const useStyles = M.makeStyles((t) => ({
   meta: {
     display: 'flex',
     flexDirection: 'column',
-    marginTop: t.spacing(3),
+    paddingTop: t.spacing(3),
     overflowY: 'auto',
   },
 }))
@@ -81,7 +81,7 @@ function DialogForm({
   validate: validateMetaInput,
   workflowsConfig,
 }) {
-  const nameValidator = PD.useNameValidator()
+  const nameValidator = PD.useNameValidator(selectedWorkflow)
   const nameExistence = PD.useNameExistence(successor.slug)
   const [nameWarning, setNameWarning] = React.useState('')
   const [metaHeight, setMetaHeight] = React.useState(0)
@@ -140,23 +140,41 @@ function DialogForm({
   )
 
   const [editorElement, setEditorElement] = React.useState()
+  const resizeObserver = React.useMemo(
+    () =>
+      new window.ResizeObserver((entries) => {
+        const { height } = entries[0].contentRect
+        setMetaHeight(height)
+      }),
+    [setMetaHeight],
+  )
+
+  // HACK: FIXME: it triggers name validation with correct workflow
+  const [hideMeta, setHideMeta] = React.useState(false)
 
   const onFormChange = React.useCallback(
-    async ({ values }) => {
-      if (document.body.contains(editorElement)) {
-        setMetaHeight(editorElement.clientHeight)
+    async ({ modified, values }) => {
+      if (modified.workflow && values.workflow !== selectedWorkflow) {
+        setWorkflow(values.workflow)
+
+        // HACK: FIXME: it triggers name validation with correct workflow
+        setHideMeta(true)
+        setTimeout(() => {
+          setHideMeta(false)
+        }, 300)
       }
 
       handleNameChange(values.name)
     },
-    [editorElement, handleNameChange, setMetaHeight],
+    [handleNameChange, selectedWorkflow, setWorkflow],
   )
 
   React.useEffect(() => {
-    if (document.body.contains(editorElement)) {
-      setMetaHeight(editorElement.clientHeight)
+    if (editorElement) resizeObserver.observe(editorElement)
+    return () => {
+      if (editorElement) resizeObserver.unobserve(editorElement)
     }
-  }, [editorElement, setMetaHeight])
+  }, [editorElement, resizeObserver])
 
   const dialogContentClasses = PD.useContentStyles({ metaHeight })
 
@@ -212,6 +230,7 @@ function DialogForm({
               <RF.Field
                 component={PD.PackageNameInput}
                 name="name"
+                workflow={selectedWorkflow || workflowsConfig}
                 validate={validators.composeAsync(
                   validators.required,
                   nameValidator.validate,
@@ -220,6 +239,7 @@ function DialogForm({
                 errors={{
                   required: 'Enter a package name',
                   invalid: 'Invalid package name',
+                  pattern: `Name should match ${selectedWorkflow?.packageNamePattern}`,
                 }}
                 helperText={nameWarning}
                 initialValue={initialName}
@@ -235,7 +255,7 @@ function DialogForm({
                 }}
               />
 
-              {schemaLoading ? (
+              {schemaLoading || hideMeta ? (
                 <PD.MetaInputSkeleton className={classes.meta} ref={setEditorElement} />
               ) : (
                 <RF.Field

@@ -25,6 +25,7 @@ PreviewStatus: {
 
 export const PreviewData = tagged([
   'DataFrame', // { preview: string, ...PreviewStatus }
+  'ECharts', // { option: object }
   'Fcs', // { preview: string, metadata: object, ...PreviewStatus }
   'IFrame', // { src: string }
   'Image', // { handle: object }
@@ -36,6 +37,7 @@ export const PreviewData = tagged([
   'Text', // { head: string, tail: string, lang: string, highlighted: { head: string, tail: string }, ...PreviewStatus }
   'Vcf', // { meta: string[], header: string[], body: string[][], variants: string[], ...PreviewStatus }
   'Vega', // { spec: Object }
+  'Voila', // { src: string }
 ])
 
 export const PreviewError = tagged([
