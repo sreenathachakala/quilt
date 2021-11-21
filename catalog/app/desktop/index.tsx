@@ -93,7 +93,7 @@ const ErrorBoundary = createBoundary(
 // error gets automatically logged to the console, so no need to do it explicitly
 const FinalBoundary = createBoundary(() => (/* error, info */) => {
   const handleReset = () => {
-    localStorage.remove('HOST')
+    localStorage.removeItem('HOST')
     window.location.reload()
   }
   return (
