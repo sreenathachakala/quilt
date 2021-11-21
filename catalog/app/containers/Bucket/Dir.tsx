@@ -268,7 +268,7 @@ function LocalFolderInput({ onChange, open, value }: LocalFolderInputProps) {
 
   return (
     <Section
-      icon={<M.Icon>folder_open</M.Icon>}
+      icon="folder_open"
       extraSummary={null}
       heading="Local folder"
       defaultExpanded={open}
