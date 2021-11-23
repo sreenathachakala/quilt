@@ -146,18 +146,23 @@ const sentryUserSelector = (state: $TSFixMe) => {
 
 const Root = () => {
   const [configUrl, setConfigUrl] = React.useState('')
+  const [config, setConfig] = React.useState({})
 
   return (
     <M.MuiThemeProvider theme={style.appTheme}>
       <WithGlobalStyles>
         <FinalBoundary>
           <Sentry.Provider>
-            <StackHost onChange={R.pipe(R.prop('configUrl'), setConfigUrl)}>
+            <StackHost
+              onChange={R.pipe(R.prop('configUrl'), setConfigUrl)}
+              ipc={IPC}
+              onConfig={setConfig}
+            >
               <Store.Provider history={history}>
                 <NamedRoutes.Provider routes={routes}>
                   <RouterProvider history={history}>
                     <Cache.Provider>
-                      <Config.Provider path={configUrl} opts={{ desktop: 'ENABLED' }}>
+                      <Config.Provider path={configUrl} opts={config}>
                         <React.Suspense fallback={<Placeholder />}>
                           <Sentry.Loader userSelector={sentryUserSelector}>
                             <GraphQLProvider>

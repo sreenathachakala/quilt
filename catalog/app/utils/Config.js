@@ -35,6 +35,8 @@ const parseJSON = (msg = 'invalid JSON') =>
 
 const fetchConfig = async ({ path, opts = {} }) => {
   try {
+    if (opts.desktop) return opts
+
     const res = await fetch(path)
     const text = await res.text()
     if (!res.ok) {

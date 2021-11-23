@@ -3,6 +3,7 @@ import * as M from '@material-ui/core'
 import * as Lab from '@material-ui/lab'
 
 import mkStorage from 'utils/storage'
+import { IPC, EVENTS } from 'utils/electron/ipc-provider'
 
 const STORAGE_KEYS = {
   HOST: 'HOST',
@@ -40,11 +41,12 @@ function isHostValid(host: string) {
 }
 
 interface HostFormProps {
+  hasConfig: boolean
   initialHost: string | null
   onSubmit: (host: string) => void
 }
 
-function HostForm({ initialHost, onSubmit }: HostFormProps) {
+function HostForm({ hasConfig, initialHost, onSubmit }: HostFormProps) {
   const [host, setHost] = React.useState<string | null>(initialHost)
   const [hostValue, setHostValue] = React.useState(host || '')
   const [error, setError] = React.useState('')
@@ -68,7 +70,7 @@ function HostForm({ initialHost, onSubmit }: HostFormProps) {
     [setError, setHostValue],
   )
   return (
-    <M.Dialog open={host === null}>
+    <M.Dialog open={host === null && !hasConfig}>
       <M.DialogTitle>Set stack host</M.DialogTitle>
       <M.DialogContent>
         <M.DialogContentText>
@@ -105,13 +107,25 @@ function getStackData(host: string) {
 interface StackHostProps {
   children: React.ReactNode
   onChange: (stack: { host: string; configUrl: string }) => void
+  onConfig: (config: $TSFixMe) => void
+  ipc: IPC
 }
 
-export default function StackHost({ children, onChange }: StackHostProps) {
+export default function StackHost({ children, onChange, onConfig, ipc }: StackHostProps) {
   const [host, setHost] = React.useState<string | null>(initialHost)
+  const [hasConfig, setHasConfig] = React.useState(false)
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      const config = await ipc.invoke(EVENTS.CONFIG_GET)
+      setHasConfig(true)
+      onConfig(JSON.parse(config))
+    }
+    loadData()
+  }, [ipc, onConfig])
 
   const handleSubmit = React.useCallback(
-    (newHost) => {
+    async (newHost) => {
       storage.set(STORAGE_KEYS.HOST, newHost)
 
       setHost(newHost)
@@ -126,8 +140,8 @@ export default function StackHost({ children, onChange }: StackHostProps) {
 
   return (
     <>
-      <HostForm initialHost={initialHost} onSubmit={handleSubmit} />
-      {host === null ? null : children}
+      <HostForm initialHost={initialHost} onSubmit={handleSubmit} hasConfig={hasConfig} />
+      {host !== null || !!hasConfig ? children : null}
     </>
   )
 }
