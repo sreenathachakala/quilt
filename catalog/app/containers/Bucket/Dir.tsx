@@ -1,40 +1,30 @@
 import { basename } from 'path'
 
-import cx from 'classnames'
 import dedent from 'dedent'
 import * as R from 'ramda'
 import * as React from 'react'
 import * as RRDom from 'react-router-dom'
 import * as M from '@material-ui/core'
 
-import Mono from 'components/Code'
 import { Crumb, copyWithoutSpaces, render as renderCrumbs } from 'components/BreadCrumbs'
 import AsyncResult from 'utils/AsyncResult'
 import * as AWS from 'utils/AWS'
-import * as Config from 'utils/Config'
 import { useData } from 'utils/Data'
 import MetaTitle from 'utils/MetaTitle'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import * as BucketPreferences from 'utils/BucketPreferences'
 import * as IPC from 'utils/electron/ipc-provider'
 import parseSearch from 'utils/parseSearch'
-import {
-  getBreadCrumbs,
-  ensureNoSlash,
-  parseS3Url,
-  withoutPrefix,
-  up,
-  decode,
-} from 'utils/s3paths'
+import { getBreadCrumbs, ensureNoSlash, withoutPrefix, up, decode } from 'utils/s3paths'
 import mkStorage from 'utils/storage'
 import type * as workflows from 'utils/workflows'
 
-import Section from './Section'
 import Code from './Code'
 import CopyButton from './CopyButton'
-import * as FileView from './FileView'
+import * as Download from './Download'
 import { Listing, PrefixFilter } from './Listing'
 import PackageDirectoryDialog from './PackageDirectoryDialog'
+import Section from './Section'
 import Summary from './Summary'
 import { displayError } from './errors'
 import * as requests from './requests'
@@ -162,90 +152,6 @@ function DirContents({
   )
 }
 
-interface ConfirmDownloadDialogProps {
-  localPath: string
-  onClose: () => void
-  open: boolean
-  remotePath: string
-}
-
-const useConfirmDownloadDialogStyles = M.makeStyles({
-  progressbar: {
-    margin: '0 0 16px',
-  },
-  shrink: {
-    width: 0,
-  },
-})
-
-function ConfirmDownloadDialog({
-  localPath,
-  onClose,
-  open,
-  remotePath,
-}: ConfirmDownloadDialogProps) {
-  const ipc = IPC.use()
-
-  const classes = useConfirmDownloadDialogStyles()
-  const [syncing, setSyncing] = React.useState(false)
-
-  const handleCancel = React.useCallback(() => onClose(), [onClose])
-  const handleConfirm = React.useCallback(async () => {
-    setSyncing(true)
-    await ipc.invoke(IPC.EVENTS.SYNC_DOWNLOAD, [parseS3Url(remotePath)], localPath)
-    onClose()
-  }, [ipc, localPath, onClose, remotePath])
-
-  const [fakeProgress, setFakeProgress] = React.useState(0)
-  const handleCliOutput = React.useCallback(() => {
-    if (fakeProgress) {
-      setFakeProgress((100 - fakeProgress) * 0.1 + fakeProgress)
-    } else {
-      setFakeProgress(1)
-      setTimeout(() => {
-        setFakeProgress((100 - fakeProgress) * 0.1 + fakeProgress)
-      }, 300)
-    }
-  }, [fakeProgress, setFakeProgress])
-  React.useEffect(() => {
-    ipc.on(IPC.EVENTS.CLI_OUTPUT, handleCliOutput)
-    return () => {
-      ipc.off(IPC.EVENTS.CLI_OUTPUT, handleCliOutput)
-    }
-  }, [ipc, handleCliOutput])
-  const progressVariant = fakeProgress ? 'determinate' : 'indeterminate'
-
-  return (
-    <M.Dialog open={open}>
-      <M.DialogTitle>Confirm download</M.DialogTitle>
-      <M.DialogContent>
-        {syncing && (
-          <M.LinearProgress
-            color="primary"
-            className={cx(classes.progressbar, { [classes.shrink]: fakeProgress === 1 })}
-            variant={progressVariant}
-            value={fakeProgress === 1 ? 0 : fakeProgress}
-          />
-        )}
-        From <Mono>{remotePath}</Mono> to <Mono>{localPath}</Mono>
-      </M.DialogContent>
-      <M.DialogActions>
-        <M.Button disabled={syncing} onClick={handleCancel}>
-          Cancel
-        </M.Button>
-        <M.Button
-          disabled={syncing}
-          color="primary"
-          onClick={handleConfirm}
-          variant="contained"
-        >
-          Download
-        </M.Button>
-      </M.DialogActions>
-    </M.Dialog>
-  )
-}
-
 interface LocalFolderInputProps {
   onChange: (path: string) => void
   open: boolean
@@ -287,44 +193,6 @@ function LocalFolderInput({ onChange, open, value }: LocalFolderInputProps) {
         value={value}
       />
     </Section>
-  )
-}
-
-interface DownloadDirectoryButtonProps {
-  bucket: string
-  className: string
-  onClick: () => void
-  path?: string
-}
-
-function DownloadDirectoryButton({
-  className,
-  bucket,
-  onClick,
-  path,
-}: DownloadDirectoryButtonProps) {
-  const { desktop, noDownload } = Config.use()
-
-  if (noDownload) return null
-
-  if (desktop) {
-    return (
-      <FileView.DownloadButtonLayout
-        className={className}
-        label="Download directory"
-        icon="archive"
-        type="submit"
-        onClick={onClick}
-      />
-    )
-  }
-
-  return (
-    <FileView.ZipDownloadForm
-      className={className}
-      suffix={`dir/${bucket}/${path}`}
-      label="Download directory"
-    />
   )
 }
 
@@ -452,7 +320,7 @@ export default function Dir({
             Create package from directory
           </CopyButton>
         )}
-        <DownloadDirectoryButton
+        <Download.DirectoryButton
           className={classes.button}
           bucket={bucket}
           path={path}
@@ -466,7 +334,7 @@ export default function Dir({
         value={localFolder}
       />
 
-      <ConfirmDownloadDialog
+      <Download.ConfirmDialog
         open={!!localFolder && !!expandedLocalFolder}
         localPath={localFolder}
         remotePath={`s3://${bucket}/${path}`}
