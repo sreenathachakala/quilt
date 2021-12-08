@@ -304,7 +304,7 @@ function DirDisplay({
           <Download.ConfirmDialog
             open={!!localFolder && !!expandedLocalFolder}
             localPath={localFolder}
-            remotePath={`s3://${bucket}/${downloadPath}`}
+            packageHandle={packageHandle}
             onClose={() => setExpandedLocalFolder(false)}
           />
 

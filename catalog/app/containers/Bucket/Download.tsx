@@ -5,7 +5,7 @@ import * as M from '@material-ui/core'
 import Mono from 'components/Code'
 import * as Config from 'utils/Config'
 import * as IPC from 'utils/electron/ipc-provider'
-import { parseS3Url } from 'utils/s3paths'
+import * as packageHandleUtils from 'utils/packageHandle'
 import mkStorage from 'utils/storage'
 
 import * as FileView from './FileView'
@@ -51,14 +51,6 @@ export function DirectoryButton({
   )
 }
 
-interface ConfirmDownloadDialogProps {
-  localPath: string
-  onClose: () => void
-  open: boolean
-  remotePath: string
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
-}
-
 const useConfirmDownloadDialogStyles = M.makeStyles({
   progressbar: {
     margin: '0 0 16px',
@@ -68,12 +60,20 @@ const useConfirmDownloadDialogStyles = M.makeStyles({
   },
 })
 
+interface ConfirmDownloadDialogProps {
+  localPath: string
+  onClose: () => void
+  open: boolean
+  packageHandle: packageHandleUtils.PackageHandle
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
+}
+
 export function ConfirmDialog({
   localPath,
   onClose,
   open,
   maxWidth = 'md',
-  remotePath,
+  packageHandle,
 }: ConfirmDownloadDialogProps) {
   const ipc = IPC.use()
 
@@ -83,9 +83,9 @@ export function ConfirmDialog({
   const handleCancel = React.useCallback(() => onClose(), [onClose])
   const handleConfirm = React.useCallback(async () => {
     setSyncing(true)
-    await ipc.invoke(IPC.EVENTS.SYNC_DOWNLOAD, [parseS3Url(remotePath)], localPath)
+    await ipc.invoke(IPC.EVENTS.SYNC_DOWNLOAD, packageHandle, localPath)
     onClose()
-  }, [ipc, localPath, onClose, remotePath])
+  }, [ipc, localPath, onClose, packageHandle])
 
   const [fakeProgress, setFakeProgress] = React.useState(0)
   const handleCliOutput = React.useCallback(() => {
@@ -118,7 +118,8 @@ export function ConfirmDialog({
             value={fakeProgress === 1 ? 0 : fakeProgress}
           />
         )}
-        From <Mono>{remotePath}</Mono> to <Mono>{localPath}</Mono>
+        From <Mono>{`s3://${packageHandle.bucket}/${packageHandle.name}`}</Mono> to{' '}
+        <Mono>{localPath}</Mono>
       </M.DialogContent>
       <M.DialogActions>
         <M.Button disabled={syncing} onClick={handleCancel}>
