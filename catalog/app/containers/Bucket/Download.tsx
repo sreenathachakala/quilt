@@ -6,19 +6,23 @@ import Mono from 'components/Code'
 import * as Config from 'utils/Config'
 import * as IPC from 'utils/electron/ipc-provider'
 import { parseS3Url } from 'utils/s3paths'
+import mkStorage from 'utils/storage'
 
 import * as FileView from './FileView'
+import Section from './Section'
 
 interface DownloadDirectoryButtonProps {
   bucket: string
   className: string
+  label?: string
   onClick: () => void
   path?: string
 }
 
 export function DirectoryButton({
-  className,
   bucket,
+  className,
+  label,
   onClick,
   path,
 }: DownloadDirectoryButtonProps) {
@@ -30,7 +34,7 @@ export function DirectoryButton({
     return (
       <FileView.DownloadButtonLayout
         className={className}
-        label="Download directory"
+        label={label}
         icon="archive"
         type="submit"
         onClick={onClick}
@@ -42,7 +46,7 @@ export function DirectoryButton({
     <FileView.ZipDownloadForm
       className={className}
       suffix={`dir/${bucket}/${path}`}
-      label="Download directory"
+      label={label}
     />
   )
 }
@@ -52,6 +56,7 @@ interface ConfirmDownloadDialogProps {
   onClose: () => void
   open: boolean
   remotePath: string
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
 }
 
 const useConfirmDownloadDialogStyles = M.makeStyles({
@@ -67,6 +72,7 @@ export function ConfirmDialog({
   localPath,
   onClose,
   open,
+  maxWidth = 'md',
   remotePath,
 }: ConfirmDownloadDialogProps) {
   const ipc = IPC.use()
@@ -101,7 +107,7 @@ export function ConfirmDialog({
   const progressVariant = fakeProgress ? 'determinate' : 'indeterminate'
 
   return (
-    <M.Dialog open={open}>
+    <M.Dialog maxWidth={maxWidth} open={open}>
       <M.DialogTitle>Confirm download</M.DialogTitle>
       <M.DialogContent>
         {syncing && (
@@ -129,4 +135,69 @@ export function ConfirmDialog({
       </M.DialogActions>
     </M.Dialog>
   )
+}
+
+interface LocalFolderInputProps {
+  onChange: (path: string) => void
+  open: boolean
+  value: string | null
+}
+
+export function LocalFolderInput({ onChange, open, value }: LocalFolderInputProps) {
+  const ipc = IPC.use()
+
+  const handleClick = React.useCallback(async () => {
+    const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
+    if (!newLocalPath) return
+    onChange(newLocalPath)
+  }, [ipc, onChange])
+
+  return (
+    <Section
+      icon="folder_open"
+      extraSummary={null}
+      heading="Local folder"
+      defaultExpanded={open}
+      gutterTop
+      gutterBottom
+    >
+      <M.TextField
+        fullWidth
+        size="small"
+        disabled={false}
+        helperText="Click to set local folder with your file browser"
+        id="localPath"
+        label="Path to local folder"
+        onClick={handleClick}
+        value={value}
+      />
+    </Section>
+  )
+}
+
+const STORAGE_KEYS = {
+  LOCAL_FOLDER: 'LOCAL_FOLDER',
+}
+const storage = mkStorage({
+  [STORAGE_KEYS.LOCAL_FOLDER]: STORAGE_KEYS.LOCAL_FOLDER,
+})
+
+export function useLocalFolder() {
+  const [value, setValue] = React.useState(() => {
+    try {
+      return storage.get(STORAGE_KEYS.LOCAL_FOLDER) || ''
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(error)
+      return ''
+    }
+  })
+  const onChange = React.useCallback(
+    (path) => {
+      storage.set(STORAGE_KEYS.LOCAL_FOLDER, path)
+      setValue(path)
+    },
+    [setValue],
+  )
+  return React.useMemo(() => [value, onChange], [value, onChange])
 }

@@ -13,10 +13,8 @@ import { useData } from 'utils/Data'
 import MetaTitle from 'utils/MetaTitle'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import * as BucketPreferences from 'utils/BucketPreferences'
-import * as IPC from 'utils/electron/ipc-provider'
 import parseSearch from 'utils/parseSearch'
 import { getBreadCrumbs, ensureNoSlash, withoutPrefix, up, decode } from 'utils/s3paths'
-import mkStorage from 'utils/storage'
 import type * as workflows from 'utils/workflows'
 
 import Code from './Code'
@@ -24,7 +22,6 @@ import CopyButton from './CopyButton'
 import * as Download from './Download'
 import { Listing, PrefixFilter } from './Listing'
 import PackageDirectoryDialog from './PackageDirectoryDialog'
-import Section from './Section'
 import Summary from './Summary'
 import { displayError } from './errors'
 import * as requests from './requests'
@@ -152,50 +149,6 @@ function DirContents({
   )
 }
 
-interface LocalFolderInputProps {
-  onChange: (path: string) => void
-  open: boolean
-  value: string | null
-}
-
-const STORAGE_KEYS = {
-  LOCAL_FOLDER: 'LOCAL_FOLDER',
-}
-const storage = mkStorage({
-  [STORAGE_KEYS.LOCAL_FOLDER]: STORAGE_KEYS.LOCAL_FOLDER,
-})
-
-function LocalFolderInput({ onChange, open, value }: LocalFolderInputProps) {
-  const ipc = IPC.use()
-
-  const handleClick = React.useCallback(async () => {
-    const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
-    if (!newLocalPath) return
-    onChange(newLocalPath)
-  }, [ipc, onChange])
-
-  return (
-    <Section
-      icon="folder_open"
-      extraSummary={null}
-      heading="Local folder"
-      defaultExpanded={open}
-      gutterBottom
-    >
-      <M.TextField
-        fullWidth
-        size="small"
-        disabled={false}
-        helperText="Click to set local folder with your file browser"
-        id="localPath"
-        label="Path to local folder"
-        onClick={handleClick}
-        value={value}
-      />
-    </Section>
-  )
-}
-
 const useStyles = M.makeStyles((t) => ({
   crumbs: {
     ...t.typography.body1,
@@ -288,23 +241,7 @@ export default function Dir({
   }, [data.result])
 
   const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
-
-  const [localFolder, setLocalFolder] = React.useState(() => {
-    try {
-      return storage.get(STORAGE_KEYS.LOCAL_FOLDER) || ''
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error)
-      return ''
-    }
-  })
-  const handleLocalFolderChange = React.useCallback(
-    (newLocalPath) => {
-      storage.set(STORAGE_KEYS.LOCAL_FOLDER, newLocalPath)
-      setLocalFolder(newLocalPath)
-    },
-    [setLocalFolder],
-  )
+  const [localFolder, setLocalFolder] = Download.useLocalFolder()
 
   return (
     <M.Box pt={2} pb={4}>
@@ -321,15 +258,16 @@ export default function Dir({
           </CopyButton>
         )}
         <Download.DirectoryButton
-          className={classes.button}
           bucket={bucket}
-          path={path}
+          className={classes.button}
+          label="Download directory"
           onClick={() => setExpandedLocalFolder(true)}
+          path={path}
         />
       </M.Box>
 
-      <LocalFolderInput
-        onChange={handleLocalFolderChange}
+      <Download.LocalFolderInput
+        onChange={setLocalFolder}
         open={expandedLocalFolder}
         value={localFolder}
       />
