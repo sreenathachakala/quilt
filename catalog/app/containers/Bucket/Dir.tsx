@@ -19,7 +19,6 @@ import type * as workflows from 'utils/workflows'
 
 import Code from './Code'
 import CopyButton from './CopyButton'
-import * as Download from './Download'
 import { Listing, PrefixFilter } from './Listing'
 import PackageDirectoryDialog from './PackageDirectoryDialog'
 import Summary from './Summary'
@@ -240,9 +239,6 @@ export default function Dir({
     )
   }, [data.result])
 
-  const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
-  const [localFolder, setLocalFolder] = Download.useLocalFolder()
-
   return (
     <M.Box pt={2} pb={4}>
       <MetaTitle>{[path || 'Files', bucket]}</MetaTitle>
@@ -257,27 +253,7 @@ export default function Dir({
             Create package from directory
           </CopyButton>
         )}
-        <Download.DirectoryButton
-          bucket={bucket}
-          className={classes.button}
-          label="Download directory"
-          onClick={() => setExpandedLocalFolder(true)}
-          path={path}
-        />
       </M.Box>
-
-      <Download.LocalFolderInput
-        onChange={setLocalFolder}
-        open={expandedLocalFolder}
-        value={localFolder}
-      />
-
-      <Download.ConfirmDialog
-        open={!!localFolder && !!expandedLocalFolder}
-        localPath={localFolder}
-        remotePath={`s3://${bucket}/${path}`}
-        onClose={() => setExpandedLocalFolder(false)}
-      />
 
       <Code gutterBottom>{code}</Code>
 
