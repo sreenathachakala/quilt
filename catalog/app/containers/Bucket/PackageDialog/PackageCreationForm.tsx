@@ -1,3 +1,5 @@
+import { dirname } from 'path'
+
 import type { ErrorObject } from 'ajv'
 import cx from 'classnames'
 import * as FF from 'final-form'
@@ -11,11 +13,13 @@ import * as Intercom from 'components/Intercom'
 import JsonValidationErrors from 'components/JsonValidationErrors'
 import AsyncResult from 'utils/AsyncResult'
 import * as BucketPreferences from 'utils/BucketPreferences'
+import * as Config from 'utils/Config'
 import * as s3paths from 'utils/s3paths'
 import * as tagged from 'utils/taggedV2'
 import * as validators from 'utils/validators'
 import type * as workflows from 'utils/workflows'
 
+import * as Upload from '../Upload'
 import * as requests from '../requests'
 
 import DialogError from './DialogError'
@@ -126,6 +130,7 @@ function PackageCreationForm({
   const classes = useStyles()
   const dialogContentClasses = PD.useContentStyles({ metaHeight })
   const validateWorkflow = PD.useWorkflowValidator(workflowsConfig)
+  const { desktop }: { desktop: boolean } = Config.use()
 
   const [entriesError, setEntriesError] = React.useState<(Error | ErrorObject)[] | null>(
     null,
@@ -271,10 +276,25 @@ function PackageCreationForm({
     }
   }
 
+  const uploadPackage = Upload.useUploadPackage()
+
   const onSubmitWrapped = async (...args: Parameters<typeof onSubmit>) => {
     setSubmitting(true)
     try {
-      return await onSubmit(...args)
+      if (desktop) {
+        const { name, msg, files, meta, workflow } = args[0]
+        const payload = {
+          entry: dirname((Object.values(files.added)[0] as any).originalPath),
+          message: msg,
+          meta,
+          workflow,
+        }
+        const { hash } = await uploadPackage(payload, { name, bucket }, schema)
+        setSuccess({ name, hash })
+        return null
+      } else {
+        return await onSubmit(...args)
+      }
     } finally {
       setSubmitting(false)
     }
