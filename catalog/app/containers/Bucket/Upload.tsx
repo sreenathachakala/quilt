@@ -1,4 +1,5 @@
 import * as React from 'react'
+import * as M from '@material-ui/core'
 
 import { JsonValue } from 'components/JsonEditor/constants'
 import * as IPC from 'utils/electron/ipc-provider'
@@ -30,5 +31,37 @@ export function useUploadPackage() {
       return ipc.invoke(IPC.EVENTS.SYNC_UPLOAD, body, target)
     },
     [ipc],
+  )
+}
+
+interface LocalFolderInputProps {
+  input: {
+    onChange: (path: string) => void
+    value: string | null
+  }
+}
+
+export function LocalFolderInput({ input: { onChange, value } }: LocalFolderInputProps) {
+  const ipc = IPC.use()
+
+  const handleClick = React.useCallback(async () => {
+    const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
+    if (!newLocalPath) return
+    onChange(newLocalPath)
+  }, [ipc, onChange])
+
+  return (
+    <>
+      <M.TextField
+        fullWidth
+        size="small"
+        disabled={false}
+        helperText="Click to set local folder with your file browser"
+        id="localPath"
+        label="Path to local folder"
+        onClick={handleClick}
+        value={value}
+      />
+    </>
   )
 }
