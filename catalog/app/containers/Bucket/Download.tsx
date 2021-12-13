@@ -183,7 +183,7 @@ const storage = mkStorage({
   [STORAGE_KEYS.LOCAL_FOLDER]: STORAGE_KEYS.LOCAL_FOLDER,
 })
 
-export function useLocalFolder() {
+export function useLocalFolder(): [string, (v: string) => void] {
   const [value, setValue] = React.useState(() => {
     try {
       return storage.get(STORAGE_KEYS.LOCAL_FOLDER) || ''

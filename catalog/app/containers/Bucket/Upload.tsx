@@ -53,13 +53,15 @@ export function LocalFolderInput({ input: { onChange, value } }: LocalFolderInpu
   return (
     <>
       <M.TextField
-        fullWidth
-        size="small"
+        InputLabelProps={{ shrink: true }}
         disabled={false}
-        helperText="Click to set local folder with your file browser"
+        fullWidth
         id="localPath"
         label="Path to local folder"
+        margin="normal"
         onClick={handleClick}
+        placeholder="Click to set local folder with your file browser"
+        size="small"
         value={value}
       />
     </>

@@ -151,7 +151,7 @@ function DirDisplay({
   onCrossBucketPush,
 }) {
   const s3 = AWS.S3.use()
-  const { apiGatewayEndpoint: endpoint, noDownload } = Config.use()
+  const { apiGatewayEndpoint: endpoint, desktop, noDownload } = Config.use()
   const credentials = AWS.Credentials.use()
   const history = useHistory()
   const { urls } = NamedRoutes.use()
@@ -309,7 +309,7 @@ function DirDisplay({
           />
 
           <TopBar crumbs={crumbs}>
-            {preferences?.ui?.actions?.revisePackage && (
+            {preferences?.ui?.actions?.revisePackage && !desktop && (
               <M.Button
                 className={classes.button}
                 variant="contained"

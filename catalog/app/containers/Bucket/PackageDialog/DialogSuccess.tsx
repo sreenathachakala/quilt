@@ -46,7 +46,10 @@ export default function DialogSuccess({
   const classes = useStyles()
   const { urls } = NamedRoutes.use()
 
-  const packageUrl = urls.bucketPackageTree(bucket, name, hash)
+  const isFullHash = hash.length >= 10
+  const packageUrl = isFullHash
+    ? urls.bucketPackageTree(bucket, name, hash)
+    : urls.bucketPackageRevisions(bucket, name)
   const packageLink = (
     <StyledLink to={packageUrl}>
       {name}@{R.take(10, hash)}

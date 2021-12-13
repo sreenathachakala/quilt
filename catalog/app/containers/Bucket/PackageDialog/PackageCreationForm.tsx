@@ -1,5 +1,3 @@
-import { dirname } from 'path'
-
 import type { ErrorObject } from 'ajv'
 import cx from 'classnames'
 import * as FF from 'final-form'
@@ -19,6 +17,7 @@ import * as tagged from 'utils/taggedV2'
 import * as validators from 'utils/validators'
 import type * as workflows from 'utils/workflows'
 
+import * as Download from '../Download'
 import * as Upload from '../Upload'
 import * as requests from '../requests'
 
@@ -79,7 +78,8 @@ const useStyles = M.makeStyles((t) => ({
   meta: {
     display: 'flex',
     flexDirection: 'column',
-    paddingTop: t.spacing(3),
+    paddingTop: ({ desktop }: { desktop: boolean }) =>
+      desktop ? t.spacing(2) : t.spacing(3),
     overflowY: 'auto',
   },
 }))
@@ -127,10 +127,10 @@ function PackageCreationForm({
   const nameExistence = PD.useNameExistence(bucket)
   const [nameWarning, setNameWarning] = React.useState<React.ReactNode>('')
   const [metaHeight, setMetaHeight] = React.useState(0)
-  const classes = useStyles()
-  const dialogContentClasses = PD.useContentStyles({ metaHeight })
-  const validateWorkflow = PD.useWorkflowValidator(workflowsConfig)
   const { desktop }: { desktop: boolean } = Config.use()
+  const classes = useStyles({ desktop })
+  const dialogContentClasses = PD.useContentStyles({ metaHeight, metaFullHeight: true })
+  const validateWorkflow = PD.useWorkflowValidator(workflowsConfig)
 
   const [entriesError, setEntriesError] = React.useState<(Error | ErrorObject)[] | null>(
     null,
@@ -172,6 +172,7 @@ function PackageCreationForm({
     msg: string
     files: FI.FilesState
     meta: {}
+    localFolder?: string
     workflow: workflows.Workflow
     // eslint-disable-next-line consistent-return
   }) => {
@@ -282,9 +283,9 @@ function PackageCreationForm({
     setSubmitting(true)
     try {
       if (desktop) {
-        const { name, msg, files, meta, workflow } = args[0]
+        const { name, msg, localFolder, meta, workflow } = args[0]
         const payload = {
-          entry: dirname((Object.values(files.added)[0] as any).originalPath),
+          entry: localFolder || '',
           message: msg,
           meta,
           workflow,
@@ -354,6 +355,8 @@ function PackageCreationForm({
 
   // HACK: FIXME: it triggers name validation with correct workflow
   const [hideMeta, setHideMeta] = React.useState(false)
+
+  const [defaultLocalFolder] = Download.useLocalFolder()
 
   return (
     <RF.Form
@@ -442,9 +445,39 @@ function PackageCreationForm({
                     }}
                   />
 
-                  {schemaLoading || hideMeta ? (
-                    <MetaInputSkeleton className={classes.meta} ref={setEditorElement} />
-                  ) : (
+                  {desktop && (
+                    <RF.Field
+                      name="localFolder"
+                      component={Upload.LocalFolderInput}
+                      initialValue={defaultLocalFolder}
+                    />
+                  )}
+
+                  {!desktop &&
+                    (schemaLoading || hideMeta ? (
+                      <MetaInputSkeleton
+                        className={classes.meta}
+                        ref={setEditorElement}
+                      />
+                    ) : (
+                      <RF.Field
+                        className={classes.meta}
+                        component={MI.MetaInput}
+                        name="meta"
+                        bucket={bucket}
+                        schema={schema}
+                        schemaError={responseError}
+                        validate={validateMetaInput}
+                        validateFields={['meta']}
+                        isEqual={R.equals}
+                        initialValue={initial?.manifest?.meta || MI.EMPTY_META_VALUE}
+                        ref={setEditorElement}
+                      />
+                    ))}
+                </Layout.LeftColumn>
+
+                <Layout.RightColumn>
+                  {desktop ? (
                     <RF.Field
                       className={classes.meta}
                       component={MI.MetaInput}
@@ -458,38 +491,37 @@ function PackageCreationForm({
                       initialValue={initial?.manifest?.meta || MI.EMPTY_META_VALUE}
                       ref={setEditorElement}
                     />
+                  ) : (
+                    <RF.Field
+                      className={cx(classes.files, {
+                        [classes.filesWithError]: !!entriesError,
+                      })}
+                      // @ts-expect-error
+                      component={FI.FilesInput}
+                      name="files"
+                      unwrapped
+                      validate={validateFiles as FF.FieldValidator<$TSFixMe>}
+                      validateFields={['files']}
+                      errors={{
+                        nonEmpty: 'Add files to create a package',
+                        schema: 'Files should match schema',
+                        [FI.HASHING]: 'Please wait while we hash the files',
+                        [FI.HASHING_ERROR]:
+                          'Error hashing files, probably some of them are too large. Please try again or contact support.',
+                      }}
+                      totalProgress={uploads.progress}
+                      title="Files"
+                      onFilesAction={onFilesAction}
+                      isEqual={R.equals}
+                      initialValue={initialFiles}
+                      bucket={selectedBucket}
+                      buckets={sourceBuckets.list}
+                      selectBucket={selectBucket}
+                      delayHashing={delayHashing}
+                      disableStateDisplay={disableStateDisplay}
+                      ui={{ reset: ui.resetFiles }}
+                    />
                   )}
-                </Layout.LeftColumn>
-
-                <Layout.RightColumn>
-                  <RF.Field
-                    className={cx(classes.files, {
-                      [classes.filesWithError]: !!entriesError,
-                    })}
-                    // @ts-expect-error
-                    component={FI.FilesInput}
-                    name="files"
-                    validate={validateFiles as FF.FieldValidator<$TSFixMe>}
-                    validateFields={['files']}
-                    errors={{
-                      nonEmpty: 'Add files to create a package',
-                      schema: 'Files should match schema',
-                      [FI.HASHING]: 'Please wait while we hash the files',
-                      [FI.HASHING_ERROR]:
-                        'Error hashing files, probably some of them are too large. Please try again or contact support.',
-                    }}
-                    totalProgress={uploads.progress}
-                    title="Files"
-                    onFilesAction={onFilesAction}
-                    isEqual={R.equals}
-                    initialValue={initialFiles}
-                    bucket={selectedBucket}
-                    buckets={sourceBuckets.list}
-                    selectBucket={selectBucket}
-                    delayHashing={delayHashing}
-                    disableStateDisplay={disableStateDisplay}
-                    ui={{ reset: ui.resetFiles }}
-                  />
 
                   <JsonValidationErrors
                     className={classes.filesError}

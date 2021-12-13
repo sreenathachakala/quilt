@@ -104,8 +104,8 @@ export function useAwsReadiness(): [boolean, AwsPlaceholderState] {
   React.useEffect(() => {
     const handleReady = async () => {
       try {
-        const { awsInstalled } = await ipc.invoke(IPC.EVENTS.READY)
-        setReady(awsInstalled)
+        const { requirementsInstalled } = await ipc.invoke(IPC.EVENTS.READY)
+        setReady(requirementsInstalled)
       } catch (error) {
         if (error instanceof Error) {
           setReady(error)
