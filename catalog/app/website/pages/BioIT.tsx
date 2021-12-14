@@ -153,8 +153,8 @@ function BioIT() {
               title: 'Use cases',
               bullets: [
                 <>
-                  Link large datasets to any notebook, ELN, or lab information management
-                  system (LIMS) with immutable URLs
+                  Link large instrument data to any notebook, ELN, or lab information
+                  management system (LIMS) with immutable URLs
                 </>,
                 <>Find, document, and understand all of your data in a central catalog</>,
                 <>Schedule pipelines to run in a single click (e.g. CRISPResso2)</>,
@@ -208,7 +208,7 @@ function BioIT() {
         />
       </Section>
       <Lede
-        heading={<>Your data grow wildly</>}
+        heading={<>Your unmanaged data grow wildly</>}
         variant="center"
         detail={
           <>
