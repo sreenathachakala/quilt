@@ -29,21 +29,21 @@ function BrowserStyledLink({ children, href }: BrowserStyledLinkProps) {
   )
 }
 
-interface AwsNotInstalledProps {
+interface CliNotInstalledProps {
   open: boolean
   error?: Error
   onCancel: () => void
   onProceed: () => void
 }
 
-function AwsNotInstalled({ error, onCancel, onProceed, open }: AwsNotInstalledProps) {
-  const AWS_CLI = 'https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html'
+function CliNotInstalled({ error, onCancel, onProceed, open }: CliNotInstalledProps) {
+  const INSTALLATION_URL = 'https://docs.quiltdata.com/installation'
   return (
     <M.Dialog open={open} maxWidth="xs" fullWidth>
-      <M.DialogTitle>AWS CLI is required for Quilt to work</M.DialogTitle>
+      <M.DialogTitle>quilt3 is required for Quilt to work</M.DialogTitle>
       <M.DialogContent>
         <M.DialogContentText>
-          Install <BrowserStyledLink href={AWS_CLI}>AWS CLI</BrowserStyledLink> to
+          Install <BrowserStyledLink href={INSTALLATION_URL}>quilt3</BrowserStyledLink> to
           proceed, please.
         </M.DialogContentText>
         {error && <Lab.Alert severity="error">{error.message}</Lab.Alert>}
@@ -53,43 +53,43 @@ function AwsNotInstalled({ error, onCancel, onProceed, open }: AwsNotInstalledPr
           Quit application
         </M.Button>
         <M.Button onClick={onProceed} color="primary" variant="outlined">
-          {error ? 'I resolved error' : 'Yes, I installed AWS CLI'}
+          {error ? 'I resolved error' : 'Yes, I installed quilt3'}
         </M.Button>
       </M.DialogActions>
     </M.Dialog>
   )
 }
 
-interface AwsPlaceholderState {
+interface CliPlaceholderState {
   ready: Error | boolean | null
   onCancel: () => void
   onProceed: () => void
 }
 
-interface AwsPlaceholderProps {
-  state: AwsPlaceholderState
+interface CliPlaceholderProps {
+  state: CliPlaceholderState
 }
 
 export function Placeholder({
   state: { ready, onCancel, onProceed },
-}: AwsPlaceholderProps) {
+}: CliPlaceholderProps) {
   if (ready === null) return <Loading />
 
   if (ready === false)
-    return <AwsNotInstalled open onCancel={onCancel} onProceed={onProceed} />
+    return <CliNotInstalled open onCancel={onCancel} onProceed={onProceed} />
 
   if (ready instanceof Error)
     return (
-      <AwsNotInstalled open error={ready} onCancel={onCancel} onProceed={onProceed} />
+      <CliNotInstalled open error={ready} onCancel={onCancel} onProceed={onProceed} />
     )
 
   throw new Error('Unexpected state')
 }
 
-export function useAwsReadiness(): [boolean, AwsPlaceholderState] {
+export function useCliReadiness(): [boolean, CliPlaceholderState] {
   const ipc = IPC.use()
 
-  const [awsReadyKey, setAwsReadyKey] = React.useState(0)
+  const [cliReadyKey, setCliReadyKey] = React.useState(0)
   const [ready, setReady] = React.useState<Error | boolean | null>(null)
 
   const onCancel = React.useCallback(() => {
@@ -98,8 +98,8 @@ export function useAwsReadiness(): [boolean, AwsPlaceholderState] {
 
   const onProceed = React.useCallback(() => {
     setReady(null)
-    setAwsReadyKey(R.inc)
-  }, [setReady, setAwsReadyKey])
+    setCliReadyKey(R.inc)
+  }, [setReady, setCliReadyKey])
 
   React.useEffect(() => {
     const handleReady = async () => {
@@ -113,7 +113,7 @@ export function useAwsReadiness(): [boolean, AwsPlaceholderState] {
       }
     }
     handleReady()
-  }, [ipc, awsReadyKey])
+  }, [ipc, cliReadyKey])
 
   return [
     ready === true,
@@ -125,4 +125,4 @@ export function useAwsReadiness(): [boolean, AwsPlaceholderState] {
   ]
 }
 
-export const use = useAwsReadiness
+export const use = useCliReadiness
