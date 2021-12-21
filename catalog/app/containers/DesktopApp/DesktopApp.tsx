@@ -12,7 +12,7 @@ import { isAdmin } from 'containers/Auth/selectors'
 import * as RT from 'utils/reactTools'
 import { useLocation } from 'utils/router'
 
-import * as AwsReadiness from './AwsReadiness'
+import * as CliReadiness from './CliReadiness'
 
 const redirectTo =
   (path: string) =>
@@ -48,8 +48,8 @@ export default function App() {
   const { paths, urls } = NamedRoutes.use()
   const l = useLocation()
 
-  const [isAwsReady, awsReadyState] = AwsReadiness.use()
-  if (!isAwsReady) return <AwsReadiness.Placeholder state={awsReadyState} />
+  const [isAwsReady, awsReadyState] = CliReadiness.use()
+  if (!isAwsReady) return <CliReadiness.Placeholder state={awsReadyState} />
 
   return (
     <CatchNotFound id={`${l.pathname}${l.search}${l.hash}`}>
