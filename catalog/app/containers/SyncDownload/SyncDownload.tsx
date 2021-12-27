@@ -238,7 +238,7 @@ export default function SyncDownload() {
 
   const handleDownloadClick = React.useCallback(async () => {
     setSyncing(true)
-    await ipc.invoke(IPC.EVENTS.SYNC_DOWNLOAD, selectedFiles, localPath)
+    await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, selectedFiles, localPath)
     setFakeProgress(100)
     setSelectedFiles([])
     setKey(R.inc)

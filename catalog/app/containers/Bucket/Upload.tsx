@@ -29,7 +29,7 @@ export function useUploadPackage() {
         meta: getMetaValue(payload.meta, schema),
         workflow: getWorkflowApiParam(payload.workflow.slug),
       }
-      return ipc.invoke(IPC.EVENTS.SYNC_UPLOAD, body, target)
+      return ipc.invoke(IPC.EVENTS.UPLOAD_PACKAGE, body, target)
     },
     [ipc],
   )

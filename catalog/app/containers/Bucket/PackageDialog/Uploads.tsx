@@ -91,7 +91,7 @@ async function uploadFileUsingCLI(
 
   try {
     const result = await ipc.invoke(
-      IPC.EVENTS.SYNC_UPLOAD,
+      IPC.EVENTS.UPLOAD_PACKAGE,
       (file as any).originalPath as string,
       `s3://${handle.bucket}/${handle.prefix}/${handle.path}`,
     )

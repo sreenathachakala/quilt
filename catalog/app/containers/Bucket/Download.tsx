@@ -83,7 +83,7 @@ export function ConfirmDialog({
   const handleCancel = React.useCallback(() => onClose(), [onClose])
   const handleConfirm = React.useCallback(async () => {
     setSyncing(true)
-    await ipc.invoke(IPC.EVENTS.SYNC_DOWNLOAD, packageHandle, localPath)
+    await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, packageHandle, localPath)
     onClose()
   }, [ipc, localPath, onClose, packageHandle])
 
