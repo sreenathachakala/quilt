@@ -1,4 +1,5 @@
 import * as React from 'react'
+import type * as RF from 'react-final-form'
 import * as M from '@material-ui/core'
 
 import { JsonValue } from 'components/JsonEditor/constants'
@@ -35,26 +36,29 @@ export function useUploadPackage() {
 }
 
 interface LocalFolderInputProps {
-  input: {
-    onChange: (path: string) => void
-    value: string | null
-  }
+  input: RF.FieldInputProps<string>
+  meta: RF.FieldMetaState<string>
 }
 
-export function LocalFolderInput({ input: { onChange, value } }: LocalFolderInputProps) {
+export function LocalFolderInput({
+  input: { onChange, value },
+  meta,
+}: LocalFolderInputProps) {
   const ipc = IPC.use()
 
+  const disabled = React.useMemo(() => meta.submitting || meta.submitSucceeded, [meta])
   const handleClick = React.useCallback(async () => {
+    if (disabled) return
     const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
     if (!newLocalPath) return
     onChange(newLocalPath)
-  }, [ipc, onChange])
+  }, [disabled, ipc, onChange])
 
   return (
     <>
       <M.TextField
         InputLabelProps={{ shrink: true }}
-        disabled={false}
+        disabled={disabled}
         fullWidth
         id="localPath"
         label="Path to local folder"
