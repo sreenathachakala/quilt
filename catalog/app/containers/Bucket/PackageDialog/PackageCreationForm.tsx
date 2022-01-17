@@ -57,7 +57,7 @@ export interface S3Entry {
 
 export interface PackageCreationSuccess {
   name: string
-  hash: string
+  hash?: string
 }
 
 const useStyles = M.makeStyles((t) => ({
@@ -290,8 +290,8 @@ function PackageCreationForm({
           meta,
           workflow,
         }
-        const { hash } = await uploadPackage(payload, { name, bucket }, schema)
-        setSuccess({ name, hash })
+        const uploadResult = await uploadPackage(payload, { name, bucket }, schema)
+        setSuccess({ name, hash: uploadResult?.hash })
         return null
       } else {
         return await onSubmit(...args)
