@@ -105,10 +105,9 @@ const useStyles = M.makeStyles((t) => ({
     animation: '$appear .3s ease',
     background:
       'linear-gradient(to top, rgba(31, 33, 81, 0.9) 0%, 90%, rgba(31, 33, 81, 0.1) 100%)',
-    bottom: 0,
     display: 'none',
+    transform: 'translateY(-50%)',
     justifyContent: 'space-between',
-    left: 0,
     padding: t.spacing(2),
     position: 'absolute',
     right: 0,
@@ -117,11 +116,9 @@ const useStyles = M.makeStyles((t) => ({
   '@keyframes appear': {
     '0%': {
       opacity: 0.3,
-      padding: t.spacing(2, 0),
     },
     '100%': {
       opacity: 1,
-      padding: t.spacing(2),
     },
   },
 }))
@@ -165,14 +162,9 @@ export default React.forwardRef(function BucketGrid(
           )}
           {cfg.desktop && (
             <div className={classes.actions}>
-              <Link to={urls.bucketDir(b.name)}>
-                <M.Button size="large" variant="contained" color="primary">
-                  Download
-                </M.Button>
-              </Link>
               <Link to={urls.bucketPackageList(b.name)}>
                 <M.Button size="large" variant="contained" color="primary">
-                  Upload
+                  Packages
                 </M.Button>
               </Link>
             </div>
