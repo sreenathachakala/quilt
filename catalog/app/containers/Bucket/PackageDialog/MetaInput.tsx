@@ -8,7 +8,7 @@ import { fade } from '@material-ui/core/styles'
 import * as M from '@material-ui/core'
 
 import JsonEditor from 'components/JsonEditor'
-import { JsonValue } from 'components/JsonEditor/constants'
+import { JsonValue, ValidationErrors } from 'components/JsonEditor/constants'
 import JsonValidationErrors from 'components/JsonValidationErrors'
 import MetadataEditor from 'components/MetadataEditor'
 import * as Notifications from 'containers/Notifications'
@@ -79,7 +79,7 @@ function Dialog({ onChange, onClose, open, schema, value }: DialogProps) {
         <M.FormControlLabel
           className={classes.switch}
           control={<M.Switch checked={isRaw} onChange={() => setRaw(!isRaw)} />}
-          label="Edit raw data"
+          label="Edit as JSON"
         />
         <M.Button onClick={handleCancel}>Discard</M.Button>
         <M.Button onClick={handleSubmit} variant="contained" color="primary">
@@ -230,7 +230,8 @@ export const MetaInput = React.forwardRef<HTMLDivElement, MetaInputProps>(
     ref,
   ) {
     const classes = useMetaInputStyles()
-    const error = schemaError || ((meta.modified || meta.submitFailed) && meta.error)
+    const errors: ValidationErrors =
+      schemaError || ((meta.modified || meta.submitFailed) && meta.error)
     const disabled = meta.submitting || meta.submitSucceeded
 
     const [open, setOpen] = React.useState(false)
@@ -318,7 +319,7 @@ export const MetaInput = React.forwardRef<HTMLDivElement, MetaInputProps>(
       <div className={className}>
         <div className={classes.header}>
           {/* eslint-disable-next-line no-nested-ternary */}
-          <M.Typography color={disabled ? 'textSecondary' : error ? 'error' : undefined}>
+          <M.Typography color={disabled ? 'textSecondary' : errors ? 'error' : undefined}>
             Metadata
           </M.Typography>
           <M.Button
@@ -326,7 +327,7 @@ export const MetaInput = React.forwardRef<HTMLDivElement, MetaInputProps>(
             disabled={disabled}
             onClick={openEditor}
             size="small"
-            title="Edit meta"
+            title="Expand JSON editor"
             variant="outlined"
             endIcon={
               <M.Icon fontSize="inherit" color="primary">
@@ -334,7 +335,7 @@ export const MetaInput = React.forwardRef<HTMLDivElement, MetaInputProps>(
               </M.Icon>
             }
           >
-            Edit
+            Expand
           </M.Button>
         </div>
 
@@ -354,6 +355,7 @@ export const MetaInput = React.forwardRef<HTMLDivElement, MetaInputProps>(
             <div className={classes.json}>
               <JsonEditor
                 disabled={disabled}
+                errors={errors}
                 key={jsonInlineEditorKey}
                 onChange={onChangeInline}
                 schema={schema}
@@ -361,7 +363,7 @@ export const MetaInput = React.forwardRef<HTMLDivElement, MetaInputProps>(
               />
             </div>
 
-            <JsonValidationErrors className={classes.errors} error={error} />
+            <JsonValidationErrors className={classes.errors} error={errors} />
           </div>
 
           {locked && (

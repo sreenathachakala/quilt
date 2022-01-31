@@ -11,21 +11,14 @@ module.exports = require('./webpack.base')({
     compress: true,
     headers: { 'Access-Control-Allow-Origin': '*' },
     historyApiFallback: {
-      disableDotRule: false,
-      verbose: true,
+      index: '/desktop.html',
     },
-    index: 'desktop.html',
     hot: true,
-    lazy: false,
-    noInfo: true,
     port: process.env.PORT || 3000,
-    publicPath: '/',
-    stats: 'normal',
-    watchOptions: {
-      aggregateTimeout: 300,
-      ignored: /node_modules/,
-      poll: 100,
+    static: {
+      directory: 'static-dev/',
     },
+    watchFiles: ['app/**/*', 'static-dev/*'],
   },
 
   // Add hot reloading in development
@@ -41,8 +34,6 @@ module.exports = require('./webpack.base')({
   // Add development plugins
   plugins: [
     new CopyWebpackPlugin({ patterns: [{ from: 'static-dev' }] }),
-
-    new webpack.HotModuleReplacementPlugin(), // Tell webpack we want hot reloading
 
     new CircularDependencyPlugin({
       exclude: /a\.js|node_modules/, // exclude node_modules
