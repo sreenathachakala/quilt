@@ -5,7 +5,6 @@ import { Switch, Route, Redirect } from 'react-router-dom'
 import * as Config from 'utils/Config'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import Placeholder from 'components/Placeholder'
-import SyncDownload from 'containers/SyncDownload'
 import requireAuth from 'containers/Auth/wrapper'
 import { CatchNotFound, ThrowNotFound } from 'containers/NotFoundPage'
 import { isAdmin } from 'containers/Auth/selectors'
@@ -55,10 +54,6 @@ export default function App() {
     <CatchNotFound id={`${l.pathname}${l.search}${l.hash}`}>
       <Switch>
         <Route path={paths.home} component={protect(Landing)} exact />
-
-        {!cfg.disableNavigator && (
-          <Route path={paths.syncDownload} component={protect(SyncDownload)} />
-        )}
 
         {!cfg.disableNavigator && (
           <Route path={paths.admin} component={requireAdmin(Admin)} />
