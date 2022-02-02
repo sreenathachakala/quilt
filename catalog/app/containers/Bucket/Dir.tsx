@@ -9,6 +9,7 @@ import * as M from '@material-ui/core'
 import { Crumb, copyWithoutSpaces, render as renderCrumbs } from 'components/BreadCrumbs'
 import AsyncResult from 'utils/AsyncResult'
 import * as AWS from 'utils/AWS'
+import * as Config from 'utils/Config'
 import { useData } from 'utils/Data'
 import MetaTitle from 'utils/MetaTitle'
 import * as NamedRoutes from 'utils/NamedRoutes'
@@ -19,6 +20,7 @@ import type * as workflows from 'utils/workflows'
 
 import Code from './Code'
 import CopyButton from './CopyButton'
+import * as FileView from './FileView'
 import { Listing, PrefixFilter } from './Listing'
 import PackageDirectoryDialog from './PackageDirectoryDialog'
 import Summary from './Summary'
@@ -175,6 +177,7 @@ export default function Dir({
 }: RRDom.RouteComponentProps<DirParams>) {
   const classes = useStyles()
   const { urls } = NamedRoutes.use<RouteMap>()
+  const { desktop, noDownload } = Config.use()
   const s3 = AWS.S3.use()
   const preferences = BucketPreferences.use()
   const { prefix } = parseSearch(l.search)
@@ -252,6 +255,13 @@ export default function Dir({
           <CopyButton bucket={bucket} className={classes.button} onChange={setSuccessor}>
             Create package from directory
           </CopyButton>
+        )}
+        {!noDownload && !desktop && (
+          <FileView.ZipDownloadForm
+            className={classes.button}
+            suffix={`dir/${bucket}/${path}`}
+            label="Download directory"
+          />
         )}
       </M.Box>
 
