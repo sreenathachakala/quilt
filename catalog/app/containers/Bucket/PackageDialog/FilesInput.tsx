@@ -1,15 +1,13 @@
 import cx from 'classnames'
-import * as fileSelector from 'file-selector'
 import pLimit from 'p-limit'
 import * as R from 'ramda'
 import * as React from 'react'
-import { useDropzone, DropEvent } from 'react-dropzone'
+import { useDropzone, FileWithPath } from 'react-dropzone'
 import * as M from '@material-ui/core'
 import * as Lab from '@material-ui/lab'
 import { fade } from '@material-ui/core/styles'
 
 import * as urls from 'constants/urls'
-import * as Config from 'utils/Config'
 import StyledLink from 'utils/StyledLink'
 import assertNever from 'utils/assertNever'
 import dissocBy from 'utils/dissocBy'
@@ -23,11 +21,6 @@ import { JsonRecord } from 'utils/types'
 import EditFileMeta from './EditFileMeta'
 import * as PD from './PackageDialog'
 import * as S3FilePicker from './S3FilePicker'
-
-// `react-dropzone -> file-selector` has `FileWithPath` extended from DOMFile, not just File
-interface FileWithPath extends File {
-  readonly path: string
-}
 
 const COLORS = {
   default: M.colors.grey[900],
@@ -1135,40 +1128,6 @@ function FileUpload({
   )
 }
 
-function prepareFileForElectron(file: File) {
-  Object.defineProperty(file, 'originalPath', {
-    value: file.path,
-    writable: false,
-    configurable: false,
-    enumerable: true,
-  })
-
-  Object.defineProperty(file, 'path', {
-    value: null,
-    writable: true,
-    configurable: true,
-    enumerable: true,
-  })
-}
-
-function getFilesFromEvent(event: Event): Promise<Array<File | DataTransferItem>> {
-  const { files } = event.target as HTMLInputElement
-  if (files) {
-    for (let i = 0; i < files.length; i++) {
-      prepareFileForElectron(files[i])
-    }
-  }
-  const { dataTransfer } = event as DragEvent
-  if (dataTransfer as DataTransfer) {
-    for (let j = 0; j < (dataTransfer?.files?.length || 0); j++) {
-      if (dataTransfer?.files[j]) {
-        prepareFileForElectron(dataTransfer?.files[j])
-      }
-    }
-  }
-  return fileSelector.fromEvent(event) as Promise<Array<File | DataTransferItem>>
-}
-
 type DirUploadProps = tagged.ValueOf<typeof FilesEntry.Dir> & {
   prefix?: string
   dispatch: DispatchFilesAction
@@ -1185,10 +1144,7 @@ function DirUpload({
   delayHashing,
   disableStateDisplay,
 }: DirUploadProps) {
-  const { filesInputExpanded } = Config.use()
-  const [expanded, setExpanded] = React.useState(
-    typeof filesInputExpanded === 'boolean' ? filesInputExpanded : true,
-  )
+  const [expanded, setExpanded] = React.useState(false)
 
   const toggleExpanded = React.useCallback(
     (e) => {
@@ -1208,18 +1164,17 @@ function DirUpload({
 
   const onDrop = React.useCallback(
     (files: FileWithPath[]) => {
+      // TODO: fix File ⟷ DOMFile ⟷ FileWithHash ⟷ FileWithPath interplay
+      // @ts-expect-error
       dispatch(FilesAction.Add({ prefix: path, files: files.map(computeHash) }))
     },
     [dispatch, path],
   )
 
   const { getRootProps, isDragActive } = useDropzone({
-    getFilesFromEvent: getFilesFromEvent as (
-      event: DropEvent,
-    ) => Promise<Array<File | DataTransferItem>>,
-    noClick: true,
-    noDragEventsBubbling: true,
     onDrop,
+    noDragEventsBubbling: true,
+    noClick: true,
   })
 
   // eslint-disable-next-line consistent-return
@@ -1445,9 +1400,6 @@ export function FilesInput({
 
   const isDragging = useDragging()
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    getFilesFromEvent: getFilesFromEvent as (
-      event: DropEvent,
-    ) => Promise<Array<File | DataTransferItem>>,
     disabled,
     onDrop,
   })
