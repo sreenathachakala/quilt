@@ -223,7 +223,6 @@ interface MetaInputProps {
   schema?: JsonSchema
 }
 
-// FIXME: disabled state
 export const MetaInput = React.forwardRef<HTMLDivElement, MetaInputProps>(
   function MetaInput(
     { className, schemaError, input: { value, onChange }, meta, schema },
