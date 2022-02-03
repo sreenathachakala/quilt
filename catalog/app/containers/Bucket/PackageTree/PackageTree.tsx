@@ -32,6 +32,7 @@ import { UseQueryResult, useQuery } from 'utils/useQuery'
 
 import Code from '../Code'
 import CopyButton from '../CopyButton'
+import * as Download from '../Download'
 import * as FileView from '../FileView'
 import Listing, { Item as ListingItem } from '../Listing'
 import PackageCopyDialog from '../PackageCopyDialog'
@@ -264,6 +265,9 @@ function DirDisplay({
     [bucket, name, hash],
   )
 
+  const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
+  const [localFolder, setLocalFolder] = Download.useLocalFolder()
+
   // XXX: use different "strategy" (e.g. network-only)?
   if (dirQuery.fetching || dirQuery.stale) {
     // TODO: skeleton placeholder
@@ -338,9 +342,7 @@ function DirDisplay({
     )
     .filter(Boolean)
 
-  const downloadPath = path
-    ? `package/${bucket}/${name}/${hash}/${path}`
-    : `package/${bucket}/${name}/${hash}`
+  const downloadPath = path ? `${name}/${hash}/${path}` : `${name}/${hash}`
 
   return (
     <>
@@ -365,6 +367,13 @@ function DirDisplay({
 
       {updateDialog.element}
 
+      <Download.ConfirmDialog
+        localPath={localFolder}
+        onClose={() => setExpandedLocalFolder(false)}
+        open={!!localFolder && !!expandedLocalFolder}
+        packageHandle={packageHandle}
+      />
+
       <TopBar crumbs={crumbs}>
         {preferences?.ui?.actions?.revisePackage && !desktop && (
           <M.Button
@@ -384,10 +393,12 @@ function DirDisplay({
           </CopyButton>
         )}
         {!noDownload && (
-          <FileView.ZipDownloadForm
+          <Download.DirectoryButton
+            bucket={bucket}
             className={classes.button}
             label={path ? 'Download sub-package' : 'Download package'}
-            suffix={downloadPath}
+            onClick={() => setExpandedLocalFolder(true)}
+            path={downloadPath}
           />
         )}
         {preferences?.ui?.actions?.deleteRevision && (
@@ -395,6 +406,14 @@ function DirDisplay({
         )}
       </TopBar>
       <PkgCode {...{ ...packageHandle, hashOrTag, path }} />
+      {desktop && (
+        <Download.LocalFolderInput
+          onChange={setLocalFolder}
+          open={expandedLocalFolder}
+          value={localFolder}
+        />
+      )}
+
       <FileView.Meta data={AsyncResult.Ok(dir.metadata)} />
       <M.Box mt={2}>
         <Listing items={items} />
