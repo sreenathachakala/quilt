@@ -393,7 +393,7 @@ function DirDisplay({
           </CopyButton>
         )}
         {!noDownload && (
-          <Download.DirectoryButton
+          <Download.DownloadButton
             bucket={bucket}
             className={classes.button}
             label={path ? 'Download sub-package' : 'Download package'}

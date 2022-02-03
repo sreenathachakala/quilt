@@ -11,7 +11,7 @@ import mkStorage from 'utils/storage'
 import * as FileView from './FileView'
 import Section from './Section'
 
-interface DownloadDirectoryButtonProps {
+interface DownloadButtonProps {
   bucket: string
   className: string
   label?: string
@@ -19,13 +19,13 @@ interface DownloadDirectoryButtonProps {
   path?: string
 }
 
-export function DirectoryButton({
+export function DownloadButton({
   bucket,
   className,
   label,
   onClick,
   path,
-}: DownloadDirectoryButtonProps) {
+}: DownloadButtonProps) {
   const { desktop, noDownload }: { desktop: boolean; noDownload: boolean } = Config.use()
 
   if (noDownload) return null
