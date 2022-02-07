@@ -188,7 +188,7 @@ function DirDisplay({
   crumbs,
   onRevisionPush,
 }: DirDisplayProps) {
-  const { desktop, noDownload } = Config.use()
+  const { desktop } = Config.use()
   const history = RRDom.useHistory()
   const { urls } = NamedRoutes.use()
   const classes = useDirDisplayStyles()
@@ -392,15 +392,13 @@ function DirDisplay({
             Push to bucket
           </CopyButton>
         )}
-        {!noDownload && (
-          <Download.DownloadButton
-            bucket={bucket}
-            className={classes.button}
-            label={path ? 'Download sub-package' : 'Download package'}
-            onClick={() => setExpandedLocalFolder(true)}
-            path={downloadPath}
-          />
-        )}
+        <Download.DownloadButton
+          bucket={bucket}
+          className={classes.button}
+          label={path ? 'Download sub-package' : 'Download package'}
+          onClick={() => setExpandedLocalFolder(true)}
+          path={downloadPath}
+        />
         {preferences?.ui?.actions?.deleteRevision && (
           <RevisionMenu className={classes.button} onDelete={onPackageDeleteDialogOpen} />
         )}
@@ -413,7 +411,6 @@ function DirDisplay({
           value={localFolder}
         />
       )}
-
       <FileView.Meta data={AsyncResult.Ok(dir.metadata)} />
       <M.Box mt={2}>
         <Listing items={items} />
