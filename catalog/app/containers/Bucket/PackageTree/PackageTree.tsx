@@ -393,7 +393,6 @@ function DirDisplay({
           </CopyButton>
         )}
         <Download.DownloadButton
-          bucket={bucket}
           className={classes.button}
           label={path ? 'Download sub-package' : 'Download package'}
           onClick={() => setExpandedLocalFolder(true)}
