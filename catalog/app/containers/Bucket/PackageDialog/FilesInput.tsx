@@ -1,13 +1,13 @@
 import cx from 'classnames'
+import pLimit from 'p-limit'
 import * as R from 'ramda'
 import * as React from 'react'
-import { useDropzone } from 'react-dropzone'
+import { useDropzone, FileWithPath } from 'react-dropzone'
 import * as M from '@material-ui/core'
 import * as Lab from '@material-ui/lab'
 import { fade } from '@material-ui/core/styles'
 
 import * as urls from 'constants/urls'
-import * as Config from 'utils/Config'
 import StyledLink from 'utils/StyledLink'
 import assertNever from 'utils/assertNever'
 import dissocBy from 'utils/dissocBy'
@@ -16,14 +16,11 @@ import { withoutPrefix } from 'utils/s3paths'
 import { readableBytes } from 'utils/string'
 import * as tagged from 'utils/taggedV2'
 import useMemoEq from 'utils/useMemoEq'
+import { JsonRecord } from 'utils/types'
 
+import EditFileMeta from './EditFileMeta'
 import * as PD from './PackageDialog'
 import * as S3FilePicker from './S3FilePicker'
-
-// `react-dropzone -> file-selector` has `FileWithPath` extended from DOMFile, not just File
-interface FileWithPath extends File {
-  readonly path: string
-}
 
 const COLORS = {
   default: M.colors.grey[900],
@@ -34,31 +31,37 @@ const COLORS = {
 
 interface FileWithHash extends File {
   hash: {
-    value: string | undefined
     ready: boolean
-    promise: Promise<string>
+    value?: string
+    error?: Error
+    promise: Promise<string | undefined>
   }
+  meta?: JsonRecord
 }
 
 const hasHash = (f: File): f is FileWithHash => !!f && !!(f as FileWithHash).hash
 
-// XXX: it might make sense to limit concurrency, tho the tests show perf is ok, since hashing is async anyways
+const hashLimit = pLimit(2)
+
 function computeHash(f: File) {
   if (hasHash(f)) return f
-  const promise = PD.hashFile(f)
+  const hashP = hashLimit(PD.hashFile, f)
   const fh = f as FileWithHash
-  fh.hash = { value: undefined, ready: false, promise }
-  promise
+  fh.hash = { ready: false } as any
+  fh.hash.promise = hashP
     .catch((e) => {
       // eslint-disable-next-line no-console
-      console.log('Error hashing file:')
+      console.log(`Error hashing file "${fh.name}":`)
       // eslint-disable-next-line no-console
       console.error(e)
+      fh.hash.error = e
+      fh.hash.ready = true
       return undefined
     })
     .then((hash) => {
       fh.hash.value = hash
       fh.hash.ready = true
+      return hash
     })
   return fh
 }
@@ -74,6 +77,7 @@ export const FilesAction = tagged.create(
     }) => v,
     Delete: (path: string) => path,
     DeleteDir: (prefix: string) => prefix,
+    Meta: (v: { path: string; meta: JsonRecord }) => v,
     Revert: (path: string) => path,
     RevertDir: (prefix: string) => prefix,
     Reset: () => {},
@@ -87,14 +91,14 @@ export type FilesAction = tagged.InstanceOf<typeof FilesAction>
 export interface ExistingFile {
   physicalKey: string
   hash: string
-  meta: object
+  meta: JsonRecord
   size: number
 }
 
 export interface PartialExistingFile {
   physicalKey: string
   hash?: string
-  meta?: object
+  meta?: JsonRecord
   size?: number
 }
 
@@ -107,6 +111,25 @@ export interface FilesState {
   // XXX: workaround used to re-trigger validation and dependent computations
   // required due to direct mutations of File objects
   counter?: number
+}
+
+const addMetaToFile = (
+  file: ExistingFile | LocalFile | S3FilePicker.S3File,
+  meta: JsonRecord,
+) => {
+  if (file instanceof window.File) {
+    const fileCopy = new window.File([file as File], (file as File).name, {
+      type: (file as File).type,
+    })
+    Object.defineProperty(fileCopy, 'meta', {
+      value: meta,
+    })
+    Object.defineProperty(fileCopy, 'hash', {
+      value: (file as FileWithHash).hash,
+    })
+    return fileCopy
+  }
+  return R.assoc('meta', meta, file)
 }
 
 const handleFilesAction = FilesAction.match<
@@ -159,6 +182,25 @@ const handleFilesAction = FilesAction.match<
       ),
       ...rest,
     }),
+  Meta: ({ path, meta }) => {
+    // TODO: use one function and type overload
+    const setMetaToAddedFile = (
+      filesDict: Record<string, LocalFile | S3FilePicker.S3File>,
+    ) => {
+      const file = filesDict[path]
+      if (!file) return filesDict
+      return R.assoc(path, addMetaToFile(file, meta), filesDict)
+    }
+    const setMetaToExistingFile = (filesDict: Record<string, ExistingFile>) => {
+      const file = filesDict[path]
+      if (!file) return filesDict
+      return R.assoc(path, addMetaToFile(file, meta), filesDict)
+    }
+    return R.evolve({
+      added: setMetaToAddedFile,
+      existing: setMetaToExistingFile,
+    })
+  },
   Revert: (path) => R.evolve({ added: R.dissoc(path), deleted: R.dissoc(path) }),
   // remove all descendants from added and deleted
   RevertDir: (prefix) =>
@@ -193,6 +235,7 @@ const FilesEntry = tagged.create(FilesEntryTag, {
     state: FilesEntryState
     type: FilesEntryType
     size: number
+    meta?: JsonRecord
   }) => v,
 })
 
@@ -244,13 +287,14 @@ interface IntermediateEntry {
   type: FilesEntryType
   path: string
   size: number
+  meta?: JsonRecord
 }
 
 const computeEntries = ({ added, deleted, existing }: FilesState) => {
   const existingEntries: IntermediateEntry[] = Object.entries(existing).map(
-    ([path, { size, hash }]) => {
+    ([path, { size, hash, meta }]) => {
       if (path in deleted) {
-        return { state: 'deleted' as const, type: 'local' as const, path, size }
+        return { state: 'deleted' as const, type: 'local' as const, path, size, meta }
       }
       if (path in added) {
         const a = added[path]
@@ -268,15 +312,15 @@ const computeEntries = ({ added, deleted, existing }: FilesState) => {
             ? ('unchanged' as const)
             : ('modified' as const)
         }
-        return { state, type, path, size: a.size }
+        return { state, type, path, size: a.size, meta }
       }
-      return { state: 'unchanged' as const, type: 'local' as const, path, size }
+      return { state: 'unchanged' as const, type: 'local' as const, path, size, meta }
     },
   )
   const addedEntries = Object.entries(added).reduce((acc, [path, f]) => {
     if (path in existing) return acc
     const type = S3FilePicker.isS3File(f) ? ('s3' as const) : ('local' as const)
-    return acc.concat({ state: 'added', type, path, size: f.size })
+    return acc.concat({ state: 'added', type, path, size: f.size, meta: f.meta })
   }, [] as IntermediateEntry[])
   const entries: IntermediateEntry[] = [...existingEntries, ...addedEntries]
   return entries.reduce((children, { path, ...rest }) => {
@@ -448,6 +492,9 @@ interface FileProps extends React.HTMLAttributes<HTMLDivElement> {
   type?: FilesEntryType
   size?: number
   action?: React.ReactNode
+  meta?: JsonRecord
+  metaDisabled?: boolean
+  onMeta?: (value: JsonRecord) => void
   interactive?: boolean
   faint?: boolean
   disableStateDisplay?: boolean
@@ -459,6 +506,9 @@ function File({
   type = 'local',
   size,
   action,
+  meta,
+  metaDisabled,
+  onMeta,
   interactive = false,
   faint = false,
   className,
@@ -467,6 +517,9 @@ function File({
 }: FileProps) {
   const classes = useFileStyles()
   const stateDisplay = disableStateDisplay ? 'unchanged' : state
+
+  // XXX: reset EditFileMeta state when file is reverted
+  const metaKey = React.useMemo(() => JSON.stringify(meta), [meta])
 
   return (
     <div
@@ -487,6 +540,13 @@ function File({
         </div>
         {size != null && <div className={classes.size}>{readableBytes(size)}</div>}
       </div>
+      <EditFileMeta
+        disabled={metaDisabled}
+        key={metaKey}
+        name={name}
+        onChange={onMeta}
+        value={meta}
+      />
       {action}
     </div>
   )
@@ -674,43 +734,46 @@ const useDropzoneMessageStyles = M.makeStyles((t) => ({
 
 interface DropzoneMessageProps {
   error: React.ReactNode
-  warn: { upload: boolean; s3: boolean }
+  warn: { upload: boolean; s3: boolean; count: boolean }
 }
 
 function DropzoneMessage({ error, warn }: DropzoneMessageProps) {
   const classes = useDropzoneMessageStyles()
 
   const label = React.useMemo(() => {
-    if (error) return error
-    if (warn.upload || warn.s3)
-      return (
-        <>
-          {warn.upload && (
-            <>
-              Total size of local files exceeds recommended maximum of{' '}
-              {readableBytes(PD.MAX_UPLOAD_SIZE)}.
-            </>
-          )}
-          {warn.upload && warn.s3 && <br />}
-          {warn.s3 && (
-            <>
-              Total size of files from S3 exceeds recommended maximum of{' '}
-              {readableBytes(PD.MAX_S3_SIZE)}.
-            </>
-          )}
-        </>
-      )
-    return 'Drop files here or click to browse'
-  }, [error, warn.upload, warn.s3])
+    if (error) return <span>{error}</span>
+    if (!warn.s3 && !warn.count && !warn.upload) {
+      return <span>Drop files here or click to browse</span>
+    }
+    return (
+      <div>
+        {warn.upload && (
+          <p>
+            Total size of local files exceeds recommended maximum of{' '}
+            {readableBytes(PD.MAX_UPLOAD_SIZE)}.
+          </p>
+        )}
+        {warn.s3 && (
+          <p>
+            Total size of files from S3 exceeds recommended maximum of{' '}
+            {readableBytes(PD.MAX_S3_SIZE)}.
+          </p>
+        )}
+        {warn.count && (
+          <p>Total number of files exceeds recommended maximum of {PD.MAX_FILE_COUNT}.</p>
+        )}
+      </div>
+    )
+  }, [error, warn.upload, warn.s3, warn.count])
 
   return (
     <div
       className={cx(classes.root, {
         [classes.error]: error,
-        [classes.warning]: !error && (warn.upload || warn.s3),
+        [classes.warning]: !error && (warn.upload || warn.s3 || warn.count),
       })}
     >
-      <span>{label}</span>
+      {label}
     </div>
   )
 }
@@ -985,6 +1048,7 @@ function FileUpload({
   prefix,
   disableStateDisplay,
   dispatch,
+  meta,
 }: FileUploadProps) {
   const path = (prefix || '') + name
 
@@ -1036,6 +1100,11 @@ function FileUpload({
     e.stopPropagation()
   }, [])
 
+  const onMeta = React.useCallback(
+    (m: JsonRecord) => dispatch(FilesAction.Meta({ path, meta: m })),
+    [dispatch, path],
+  )
+
   return (
     // eslint-disable-next-line jsx-a11y/click-events-have-key-events
     <File
@@ -1047,6 +1116,9 @@ function FileUpload({
       type={type}
       name={name}
       size={size}
+      meta={meta}
+      metaDisabled={state === 'deleted'}
+      onMeta={onMeta}
       action={
         <M.IconButton onClick={action.handler} title={action.hint} size="small">
           <M.Icon fontSize="inherit">{action.icon}</M.Icon>
@@ -1072,10 +1144,7 @@ function DirUpload({
   delayHashing,
   disableStateDisplay,
 }: DirUploadProps) {
-  const { filesInputExpanded } = Config.use()
-  const [expanded, setExpanded] = React.useState(
-    typeof filesInputExpanded === 'boolean' ? filesInputExpanded : true,
-  )
+  const [expanded, setExpanded] = React.useState(false)
 
   const toggleExpanded = React.useCallback(
     (e) => {
@@ -1095,6 +1164,8 @@ function DirUpload({
 
   const onDrop = React.useCallback(
     (files: FileWithPath[]) => {
+      // TODO: fix File ⟷ DOMFile ⟷ FileWithHash ⟷ FileWithPath interplay
+      // @ts-expect-error
       dispatch(FilesAction.Add({ prefix: path, files: files.map(computeHash) }))
     },
     [dispatch, path],
@@ -1361,6 +1432,7 @@ export function FilesInput({
   const warn = {
     upload: stats.upload.size > PD.MAX_UPLOAD_SIZE,
     s3: stats.s3.size > PD.MAX_S3_SIZE,
+    count: stats.upload.count + stats.s3.count > PD.MAX_FILE_COUNT,
   }
 
   const [s3FilePickerOpen, setS3FilePickerOpen] = React.useState(false)
@@ -1399,7 +1471,7 @@ export function FilesInput({
               ? 'disabled'
               : error // eslint-disable-line no-nested-ternary
               ? 'error'
-              : warn.upload || warn.s3
+              : warn.upload || warn.s3 || warn.count
               ? 'warn'
               : undefined
           }
@@ -1439,7 +1511,7 @@ export function FilesInput({
               )
             </M.Box>
           )}
-          {(warn.upload || warn.s3) && (
+          {(warn.upload || warn.s3 || warn.count) && (
             <M.Icon style={{ marginLeft: 6 }} fontSize="small">
               error_outline
             </M.Icon>
@@ -1471,12 +1543,12 @@ export function FilesInput({
           interactive
           active={isDragActive && !ref.current.disabled}
           error={!!error}
-          warn={warn.upload || warn.s3}
+          warn={warn.upload || warn.s3 || warn.count}
         >
           <input {...getInputProps()} />
 
           {!!computedEntries.length && (
-            <FilesContainer error={!!error} warn={warn.upload || warn.s3}>
+            <FilesContainer error={!!error} warn={warn.upload || warn.s3 || warn.count}>
               {computedEntries.map(
                 FilesEntry.match({
                   Dir: (ps) => (
@@ -1558,6 +1630,7 @@ interface FilesSelectorEntry {
   name: string
   selected: boolean
   size?: number
+  meta?: JsonRecord
 }
 
 export type FilesSelectorState = FilesSelectorEntry[]

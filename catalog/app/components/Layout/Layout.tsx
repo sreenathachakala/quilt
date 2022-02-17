@@ -29,28 +29,21 @@ export function Root({ dark = false, ...props }: RootProps) {
   )
 }
 
-interface LayoutProps {
-  noNavBar?: boolean
-  noFooter?: boolean
+export interface LayoutProps {
+  bare?: boolean
   dark?: boolean
   children?: React.ReactNode
   pre?: React.ReactNode
 }
 
-export function Layout({
-  noFooter = false,
-  noNavBar = false,
-  dark = false,
-  children,
-  pre,
-}: LayoutProps) {
+export function Layout({ bare = false, dark = false, children, pre }: LayoutProps) {
   return (
     <Root dark={dark}>
-      {noNavBar ? <NavBar.Container /> : <NavBar.NavBar />}
+      {bare ? <NavBar.Container /> : <NavBar.NavBar />}
       {!!pre && pre}
       {!!children && <M.Box p={4}>{children}</M.Box>}
       <M.Box flexGrow={1} />
-      {!noFooter && <Footer />}
+      <Footer />
     </Root>
   )
 }

@@ -5,15 +5,13 @@ import { Switch, Route, Redirect } from 'react-router-dom'
 import * as Config from 'utils/Config'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import Placeholder from 'components/Placeholder'
-import SyncDownload from 'containers/SyncDownload'
-import SyncHome from 'containers/SyncHome'
 import requireAuth from 'containers/Auth/wrapper'
 import { CatchNotFound, ThrowNotFound } from 'containers/NotFoundPage'
 import { isAdmin } from 'containers/Auth/selectors'
-import { loadable } from 'utils/reactTools'
+import * as RT from 'utils/reactTools'
 import { useLocation } from 'utils/router'
 
-import * as AwsReadiness from './AwsReadiness'
+import * as CliReadiness from './CliReadiness'
 
 const redirectTo =
   (path: string) =>
@@ -22,19 +20,23 @@ const redirectTo =
 
 const requireAdmin = (requireAuth as $TSFixMe)({ authorizedSelector: isAdmin })
 
-const mkLazy = (load: $TSFixMe) =>
-  (loadable as $TSFixMe)(load, { fallback: () => <Placeholder /> })
+const Admin = RT.mkLazy(() => import('containers/Admin'), Placeholder)
+const AuthActivationError = RT.mkLazy(
+  () => import('containers/Auth/ActivationError'),
+  Placeholder,
+)
+const AuthCode = requireAuth()(
+  RT.mkLazy(() => import('containers/Auth/Code'), Placeholder),
+)
+const AuthPassChange = RT.mkLazy(() => import('containers/Auth/PassChange'), Placeholder)
+const AuthPassReset = RT.mkLazy(() => import('containers/Auth/PassReset'), Placeholder)
+const AuthSSOSignUp = RT.mkLazy(() => import('containers/Auth/SSOSignUp'), Placeholder)
+const AuthSignIn = RT.mkLazy(() => import('containers/Auth/SignIn'), Placeholder)
+const AuthSignOut = RT.mkLazy(() => import('containers/Auth/SignOut'), Placeholder)
+const AuthSignUp = RT.mkLazy(() => import('containers/Auth/SignUp'), Placeholder)
+const Bucket = RT.mkLazy(() => import('containers/Bucket'), Placeholder)
 
-const Admin = mkLazy(() => import('containers/Admin'))
-const AuthActivationError = mkLazy(() => import('containers/Auth/ActivationError'))
-const AuthCode = requireAuth()(mkLazy(() => import('containers/Auth/Code')))
-const AuthPassChange = mkLazy(() => import('containers/Auth/PassChange'))
-const AuthPassReset = mkLazy(() => import('containers/Auth/PassReset'))
-const AuthSSOSignUp = mkLazy(() => import('containers/Auth/SSOSignUp'))
-const AuthSignIn = mkLazy(() => import('containers/Auth/SignIn'))
-const AuthSignOut = mkLazy(() => import('containers/Auth/SignOut'))
-const AuthSignUp = mkLazy(() => import('containers/Auth/SignUp'))
-const Bucket = mkLazy(() => import('containers/Bucket'))
+const Landing = RT.mkLazy(() => import('website/pages/Landing'), Placeholder)
 
 export default function App() {
   const cfg = Config.useConfig()
@@ -45,17 +47,13 @@ export default function App() {
   const { paths, urls } = NamedRoutes.use()
   const l = useLocation()
 
-  const [isAwsReady, awsReadyState] = AwsReadiness.use()
-  if (!isAwsReady) return <AwsReadiness.Placeholder state={awsReadyState} />
+  const [isAwsReady, awsReadyState] = CliReadiness.use()
+  if (!isAwsReady) return <CliReadiness.Placeholder state={awsReadyState} />
 
   return (
     <CatchNotFound id={`${l.pathname}${l.search}${l.hash}`}>
       <Switch>
-        <Route path={paths.home} component={protect(SyncHome)} exact />
-
-        {!cfg.disableNavigator && (
-          <Route path={paths.syncDownload} component={protect(SyncDownload)} />
-        )}
+        <Route path={paths.home} component={protect(Landing)} exact />
 
         {!cfg.disableNavigator && (
           <Route path={paths.admin} component={requireAdmin(Admin)} />

@@ -11,19 +11,19 @@ release-tags: &release-tags
     only: /[0-9]+(\.[0-9]+)*([abrc]+[0-9]+)?$/
 
 executors:
-  python-36:
-    docker:
-      - image: circleci/python:3.6
   python-37:
     docker:
-      - image: circleci/python:3.7
+      - image: cimg/python:3.7
   python-38:
     docker:
-      - image: circleci/python:3.8
+      - image: cimg/python:3.8
   python-39:
     docker:
-      - image: circleci/python:3.9
-  python: python-36
+      - image: cimg/python:3.9
+  python-310:
+    docker:
+      - image: cimg/python:3.10
+  python: python-37
 
 commands:
   setup-venv:
@@ -32,7 +32,7 @@ commands:
       - run:
           name: Setup venv
           command: |
-            pip install virtualenv==20.0.25
+            pip install virtualenv==20.8.0
             virtualenv venv
             if [ -e venv/bin/activate ]; then
               echo ". venv/bin/activate" >> $BASH_ENV
@@ -63,7 +63,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            pip install 'pylint==2.9' 'pycodestyle>=2.6.0a1'
+            pip install 'pylint==2.10.2' 'pycodestyle>=2.6.0a1'
       - run:
           name: Run pylint
           command: |
@@ -109,7 +109,7 @@ jobs:
           flags: "api-python"
 
   test-lambda:
-    executor: python-38
+    executor: python-37
     description: "Test lambdas"
     environment:
       QUILT_DISABLE_USAGE_METRICS: true
@@ -146,7 +146,7 @@ jobs:
       - setup-venv
       - run:
           name: install deps
-          command: pip install api/python nbconvert git+https://github.com/quiltdata/pydoc-markdown.git@quilt
+          command: pip install PyYAML~=5.4.1 api/python nbconvert git+https://github.com/quiltdata/pydoc-markdown.git@quilt
       - run:
           name: generate docs
           command: cd gendocs && python build.py
@@ -189,9 +189,10 @@ jobs:
             twine upload dist/*
 
   test-catalog:
+    resource_class: medium+
     executor:
       name: node/default
-      tag: "current"
+      tag: "16.11"
     steps:
       - checkout
       - node/install-packages:
@@ -219,10 +220,10 @@ workflows:
           matrix:
             parameters:
               executor:
-                - python-36
                 - python-37
                 - python-38
                 - python-39
+                - python-310
           filters:
             <<: *release-tags
       - test-client:
@@ -241,14 +242,18 @@ workflows:
                 - preview
                 - s3select
                 - thumbnail
+                - transcode
                 - pkgselect
                 - shared
+                - s3hash
                 - pkgevents
                 - pkgpush
       - test-lambda:
           name: test-lambda-indexer
           path: es/indexer
       - pypi-release:
+          context:
+            - pypi-release
           requires:
             - test-client
             - test-client-windows

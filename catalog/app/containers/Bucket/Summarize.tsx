@@ -15,16 +15,27 @@ import { useData } from 'utils/Data'
 import * as LogicalKeyResolver from 'utils/LogicalKeyResolver'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import Link from 'utils/StyledLink'
-import { getBreadCrumbs, getPrefix, withoutPrefix } from 'utils/s3paths'
+import { PackageHandle } from 'utils/packageHandle'
+import * as s3paths from 'utils/s3paths'
 
 import * as requests from './requests'
+import * as errors from './errors'
+
+type SummaryFileTypeShorthand = 'echarts' | 'voila'
+type SummaryFileTypeExtended = {
+  name: SummaryFileTypeShorthand
+  style?: { height: string }
+}
+type SummaryFileType = SummaryFileTypeShorthand | SummaryFileTypeExtended
+type SummaryFileTypes = SummaryFileType[]
 
 interface S3Handle {
   bucket: string
+  error?: errors.BucketError
   key: string
   logicalKey?: string
   size?: number
-  version?: number
+  version?: string
 }
 
 interface SummarizeFile {
@@ -32,10 +43,37 @@ interface SummarizeFile {
   handle: S3Handle
   path: string
   title?: string
+  types?: SummaryFileTypes
   width?: string | number
 }
 
 type MakeURL = (h: S3Handle) => LocationDescriptor
+
+const useDownloadButtonStyles = M.makeStyles((t) => ({
+  root: {
+    alignItems: 'center',
+    display: 'flex',
+    height: t.spacing(4),
+    justifyContent: 'center',
+    width: t.spacing(3),
+  },
+}))
+
+interface DownloadButtonProps {
+  className?: string
+  handle: S3Handle
+}
+
+function DownloadButton({ className, handle }: DownloadButtonProps) {
+  const classes = useDownloadButtonStyles()
+  return AWS.Signer.withDownloadUrl(handle, (url: string) => (
+    <div className={cx(classes.root, className)}>
+      <M.IconButton href={url} title="Download" download>
+        <M.Icon>arrow_downward</M.Icon>
+      </M.IconButton>
+    </div>
+  ))
+}
 
 enum FileThemes {
   Overview = 'overview',
@@ -76,6 +114,7 @@ const useSectionStyles = M.makeStyles((t) => ({
   },
   heading: {
     ...t.typography.h6,
+    display: 'flex',
     lineHeight: 1.75,
     marginBottom: t.spacing(1),
     [t.breakpoints.up('sm')]: {
@@ -85,19 +124,34 @@ const useSectionStyles = M.makeStyles((t) => ({
       ...t.typography.h5,
     },
   },
+  headingAction: {
+    marginLeft: 'auto',
+  },
 }))
 
 interface SectionProps extends M.PaperProps {
   description?: React.ReactNode
+  handle?: S3Handle
   heading?: React.ReactNode
 }
 
-export function Section({ heading, description, children, ...props }: SectionProps) {
+export function Section({
+  handle,
+  heading,
+  description,
+  children,
+  ...props
+}: SectionProps) {
   const ft = React.useContext(FileThemeContext)
   const classes = useSectionStyles()
   return (
     <M.Paper className={cx(classes.root, classes[ft])} {...props}>
-      {!!heading && <div className={classes.heading}>{heading}</div>}
+      {!!heading && (
+        <div className={classes.heading}>
+          {heading}
+          {handle && <DownloadButton className={classes.headingAction} handle={handle} />}
+        </div>
+      )}
       {!!description && <div className={classes.description}>{description}</div>}
       {children}
     </M.Paper>
@@ -173,23 +227,14 @@ function PreviewBox({ contents, expanded: defaultExpanded = false }: PreviewBoxP
 
 const CrumbLink = M.styled(Link)({ wordBreak: 'break-word' })
 
-interface FilePreviewProps {
-  description: React.ReactNode
+interface CrumbsProps {
   handle: S3Handle
-  headingOverride: React.ReactNode
-  expanded?: boolean
 }
 
-export function FilePreview({
-  description,
-  handle,
-  headingOverride,
-  expanded,
-}: FilePreviewProps) {
+function Crumbs({ handle }: CrumbsProps) {
   const { urls } = NamedRoutes.use()
-
   const crumbs = React.useMemo(() => {
-    const all = getBreadCrumbs(handle.key)
+    const all = s3paths.getBreadCrumbs(handle.key)
     const dirs = R.init(all).map(({ label, path }) => ({
       to: urls.bucketFile(handle.bucket, path),
       children: label,
@@ -201,32 +246,53 @@ export function FilePreview({
     return { dirs, file }
   }, [handle.bucket, handle.key, urls])
 
-  const heading =
-    headingOverride != null ? (
-      headingOverride
-    ) : (
-      <span onCopy={copyWithoutSpaces}>
-        {crumbs.dirs.map((c) => (
-          <React.Fragment key={`crumb:${c.to}`}>
-            <CrumbLink {...c} />
-            &nbsp;/{' '}
-          </React.Fragment>
-        ))}
-        <CrumbLink {...crumbs.file} />
-      </span>
-    )
+  return (
+    <span onCopy={copyWithoutSpaces}>
+      {crumbs.dirs.map((c) => (
+        <React.Fragment key={`crumb:${c.to}`}>
+          <CrumbLink {...c} />
+          &nbsp;/{' '}
+        </React.Fragment>
+      ))}
+      <CrumbLink {...crumbs.file} />
+    </span>
+  )
+}
+
+interface FilePreviewProps {
+  expanded?: boolean
+  file?: SummarizeFile
+  handle: S3Handle
+  headingOverride: React.ReactNode
+  packageHandle?: PackageHandle
+}
+
+export function FilePreview({
+  expanded,
+  file,
+  handle,
+  headingOverride,
+  packageHandle,
+}: FilePreviewProps) {
+  const description = file ? <Markdown data={file.description} /> : null
+  const heading = headingOverride != null ? headingOverride : <Crumbs handle={handle} />
+
+  const key = handle.logicalKey || handle.key
+  const props = React.useMemo(() => Preview.getRenderProps(key, file), [key, file])
 
   // TODO: check for glacier and hide items
   return (
-    <Section description={description} heading={heading}>
+    <Section description={description} heading={heading} handle={handle}>
       {Preview.load(
-        handle,
+        { ...handle, packageHandle }, // FIXME: memoize
         Preview.display({
           renderContents: (contents: React.ReactNode) => (
             <PreviewBox {...{ contents, expanded }} />
           ),
           renderProgress: () => <ContentSkel />,
+          props,
         }),
+        file,
       )}
     </Section>
   )
@@ -274,7 +340,7 @@ interface TitleCustomProps {
 function TitleCustom({ title, mkUrl, handle }: TitleCustomProps) {
   const { urls } = NamedRoutes.use()
 
-  const filepath = withoutPrefix(getPrefix(handle.key), handle.key)
+  const filepath = s3paths.withoutPrefix(s3paths.getPrefix(handle.key), handle.key)
   const route = React.useMemo(
     () => (mkUrl ? mkUrl(handle) : urls.bucketFile(handle.bucket, handle.key)),
     [handle, mkUrl, urls],
@@ -296,7 +362,7 @@ function TitleFilename({ handle, mkUrl }: TitleFilenameProps) {
   const { urls } = NamedRoutes.use()
 
   // TODO: (@nl_0) make a reusable function to compute relative s3 paths or smth
-  const title = withoutPrefix(getPrefix(handle.key), handle.key)
+  const title = s3paths.withoutPrefix(s3paths.getPrefix(handle.key), handle.key)
   const route = React.useMemo(
     () => (mkUrl ? mkUrl(handle) : urls.bucketFile(handle.bucket, handle.key)),
     [handle, mkUrl, urls],
@@ -328,16 +394,25 @@ interface FileHandleProps {
   file: SummarizeFile
   mkUrl?: MakeURL
   s3: S3
+  packageHandle?: PackageHandle
 }
 
-function FileHandle({ file, mkUrl, s3 }: FileHandleProps) {
+function FileHandle({ file, mkUrl, packageHandle, s3 }: FileHandleProps) {
+  if (file.handle.error)
+    return (
+      <Section heading={file.handle.key}>
+        Unable to resolve path: "{s3paths.handleToS3Url(file.handle)}"
+      </Section>
+    )
+
   return (
     <EnsureAvailability s3={s3} handle={file.handle}>
       {() => (
         <FilePreview
-          description={<Markdown data={file.description} />}
           handle={file.handle}
           headingOverride={getHeadingOverride(file, mkUrl)}
+          file={file}
+          packageHandle={packageHandle}
         />
       )}
     </EnsureAvailability>
@@ -357,13 +432,14 @@ interface ColumnProps {
   file: SummarizeFile
   mkUrl?: MakeURL
   s3: S3
+  packageHandle?: PackageHandle
 }
 
-function Column({ className, file, mkUrl, s3 }: ColumnProps) {
+function Column({ className, file, mkUrl, packageHandle, s3 }: ColumnProps) {
   const style = React.useMemo(() => getColumnStyles(file.width), [file.width])
   return (
     <div className={className} style={style}>
-      <FileHandle file={file} mkUrl={mkUrl} s3={s3} />
+      <FileHandle file={file} mkUrl={mkUrl} packageHandle={packageHandle} s3={s3} />
     </div>
   )
 }
@@ -386,12 +462,14 @@ interface RowProps {
   file: SummarizeFile
   mkUrl?: MakeURL
   s3: S3
+  packageHandle?: PackageHandle
 }
 
-function Row({ file, mkUrl, s3 }: RowProps) {
+function Row({ file, mkUrl, packageHandle, s3 }: RowProps) {
   const classes = useRowStyles()
 
-  if (!Array.isArray(file)) return <FileHandle file={file} s3={s3} mkUrl={mkUrl} />
+  if (!Array.isArray(file))
+    return <FileHandle file={file} s3={s3} mkUrl={mkUrl} packageHandle={packageHandle} />
 
   return (
     <div className={classes.row}>
@@ -412,9 +490,10 @@ interface SummaryEntriesProps {
   entries: SummarizeFile[]
   mkUrl?: MakeURL
   s3: S3
+  packageHandle?: PackageHandle
 }
 
-function SummaryEntries({ entries, mkUrl, s3 }: SummaryEntriesProps) {
+function SummaryEntries({ entries, mkUrl, packageHandle, s3 }: SummaryEntriesProps) {
   const [shown, setShown] = React.useState(SUMMARY_ENTRIES)
   const showMore = React.useCallback(() => {
     setShown(R.add(SUMMARY_ENTRIES))
@@ -430,6 +509,7 @@ function SummaryEntries({ entries, mkUrl, s3 }: SummaryEntriesProps) {
           }
           file={file}
           mkUrl={mkUrl}
+          packageHandle={packageHandle}
           s3={s3}
         />
       ))}
@@ -481,9 +561,10 @@ interface SummaryNestedProps {
     version: string
     etag: string
   }
+  packageHandle: PackageHandle
 }
 
-export function SummaryNested({ handle, mkUrl }: SummaryNestedProps) {
+export function SummaryNested({ handle, mkUrl, packageHandle }: SummaryNestedProps) {
   const s3 = AWS.S3.use()
   const resolveLogicalKey = LogicalKeyResolver.use()
   const data = useData(requests.summarize, { s3, handle, resolveLogicalKey })
@@ -498,7 +579,12 @@ export function SummaryNested({ handle, mkUrl }: SummaryNestedProps) {
           return null
         },
         Ok: (entries: SummarizeFile[]) => (
-          <SummaryEntries entries={entries} s3={s3} mkUrl={mkUrl} />
+          <SummaryEntries
+            entries={entries}
+            s3={s3}
+            mkUrl={mkUrl}
+            packageHandle={packageHandle}
+          />
         ),
         Pending: () => <FilePreviewSkel />,
         _: () => null,

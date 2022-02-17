@@ -2,7 +2,6 @@ import contextlib
 import functools
 import gc
 import hashlib
-import inspect
 import io
 import json
 import logging
@@ -41,13 +40,11 @@ from .util import TEMPFILE_DIR_PATH as APP_DIR_TEMPFILE_DIR
 from .util import (
     PhysicalKey,
     QuiltException,
-    RemovedInQuilt4Warning,
     catalog_package_url,
     extract_file_extension,
     fix_url,
     get_from_config,
     get_install_location,
-    parse_sub_package_name,
     quiltignore_filter,
     user_is_configured_to_custom_stack,
     validate_key,
@@ -103,7 +100,7 @@ class ObjectPathCache:
     def get(cls, url):
         cache_path = cls._cache_path(url)
         try:
-            with open(cache_path) as fd:
+            with open(cache_path, encoding='utf-8') as fd:
                 path, dev, ino, mtime = json.load(fd)
         except (FileNotFoundError, ValueError):
             return None
@@ -125,7 +122,7 @@ class ObjectPathCache:
         stat = pathlib.Path(path).stat()
         cache_path = cls._cache_path(url)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(cache_path, 'w') as fd:
+        with open(cache_path, 'w', encoding='utf-8') as fd:
             json.dump([path, stat.st_dev, stat.st_ino, stat.st_mtime_ns], fd)
 
     @classmethod
@@ -183,7 +180,7 @@ class PackageEntry:
 
     @property
     def meta(self):
-        return self._meta.get('user_meta', dict())
+        return self._meta.get('user_meta', {})
 
     def set_meta(self, meta):
         """
@@ -336,18 +333,6 @@ class PackageEntry:
     def with_physical_key(self, key):
         return self.__class__(key, self.size, self.hash, self._meta)
 
-    @property
-    def physical_keys(self):
-        """
-        Deprecated
-        """
-        warnings.warn(
-            "PackageEntry.physical_keys is deprecated, use PackageEntry.physical_key instead.",
-            category=RemovedInQuilt4Warning,
-            stacklevel=2,
-        )
-        return [self.physical_key]
-
 
 class PackageRevInfo:
     __slots__ = ('registry', 'name', 'top_hash')
@@ -456,7 +441,7 @@ class Package:
 
     @property
     def meta(self):
-        return self._meta.get('user_meta', dict())
+        return self._meta.get('user_meta', {})
 
     @classmethod
     @ApiTelemetry("package.install")
@@ -465,10 +450,7 @@ class Package:
         Installs a named package to the local registry and downloads its files.
 
         Args:
-            name(str): Name of package to install. It also can be passed as NAME/PATH
-                (/PATH is deprecated, use the `path` parameter instead),
-                in this case only the sub-package or the entry specified by PATH will
-                be downloaded.
+            name(str): Name of package to install.
             registry(str): Registry where package is located.
                 Defaults to the default remote registry.
             top_hash(str): Hash of package to install. Defaults to latest.
@@ -504,18 +486,7 @@ class Package:
                     f"'build' instead."
                 )
 
-        parts = parse_sub_package_name(name)
-        if parts and parts[1]:
-            warnings.warn(
-                "Passing path via package name is deprecated, use the 'path' parameter instead.",
-                category=RemovedInQuilt4Warning,
-                stacklevel=3,
-            )
-            name, subpkg_key = parts
-            validate_key(subpkg_key)
-            if path:
-                raise ValueError("You must not pass path via package name and 'path' parameter.")
-        elif path:
+        if path:
             validate_key(path)
             subpkg_key = path
         else:
@@ -564,15 +535,7 @@ class Package:
         print(f"Successfully installed package '{name}', tophash={short_top_hash} from {registry}")
 
     @classmethod
-    def _parse_resolve_hash_args(cls, name, registry, hash_prefix):
-        return name, registry, hash_prefix
-
-    @staticmethod
-    def _parse_resolve_hash_args_old(registry, hash_prefix):
-        return None, registry, hash_prefix
-
-    @classmethod
-    def resolve_hash(cls, *args, **kwargs):
+    def resolve_hash(cls, name, registry, hash_prefix):
         """
         Find a hash that starts with a given prefix.
 
@@ -581,25 +544,8 @@ class Package:
             registry (str): location of registry
             hash_prefix (str): hash prefix with length between 6 and 64 characters
         """
-        try:
-            name, registry, hash_prefix = cls._parse_resolve_hash_args_old(*args, **kwargs)
-        except TypeError:
-            name, registry, hash_prefix = cls._parse_resolve_hash_args(*args, **kwargs)
-            validate_package_name(name)
-            return get_package_registry(registry).resolve_top_hash(name, hash_prefix)
-        else:
-            registry = get_package_registry(registry)
-            if registry.resolve_top_hash_requires_pkg_name:
-                raise TypeError(f'Package name is required for resolving top hash at {registry.root}.')
-            warnings.warn(
-                "Calling resolve_hash() without the 'name' parameter is deprecated.",
-                category=RemovedInQuilt4Warning,
-                stacklevel=2,
-            )
-            return registry.resolve_top_hash(name, hash_prefix)
-
-    # This is needed for nice signature in docs.
-    resolve_hash.__func__.__signature__ = inspect.signature(_parse_resolve_hash_args.__func__)
+        validate_package_name(name)
+        return get_package_registry(registry).resolve_top_hash(name, hash_prefix)
 
     @classmethod
     @ApiTelemetry("package.browse")
@@ -1047,8 +993,8 @@ class Package:
         else:
             self._meta.pop('workflow', None)
 
-    def _validate_with_workflow(self, *, registry, workflow, message):
-        self._workflow = workflows.validate(registry=registry, workflow=workflow, meta=self.meta, message=message)
+    def _validate_with_workflow(self, *, registry, workflow, name, message):
+        self._workflow = workflows.validate(registry=registry, workflow=workflow, name=name, pkg=self, message=message)
 
     @ApiTelemetry("package.build")
     @_fix_docstring(workflow=_WORKFLOW_PARAM_DOCSTRING)
@@ -1067,7 +1013,7 @@ class Package:
             The top hash as a string.
         """
         registry = get_package_registry(registry)
-        self._validate_with_workflow(registry=registry, workflow=workflow, message=message)
+        self._validate_with_workflow(registry=registry, workflow=workflow, name=name, message=message)
         return self._build(name=name, registry=registry, message=message)
 
     def _build(self, name, registry, message):
@@ -1434,7 +1380,7 @@ class Package:
                     )
 
         registry = get_package_registry(registry)
-        self._validate_with_workflow(registry=registry, workflow=workflow, message=message)
+        self._validate_with_workflow(registry=registry, workflow=workflow, name=name, message=message)
 
         self._fix_sha256()
 

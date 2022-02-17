@@ -1,5 +1,6 @@
 import * as React from 'react'
 
+import * as Config from 'utils/Config'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import { BaseError } from 'utils/error'
 
@@ -10,6 +11,7 @@ export class OktaError extends BaseError {
 }
 
 export function useOkta({ clientId, baseUrl }) {
+  const cfg = Config.useConfig()
   return React.useCallback(
     () =>
       new Promise((resolve, reject) => {
@@ -34,7 +36,8 @@ export function useOkta({ clientId, baseUrl }) {
           }
         }, 500)
         const handleMessage = ({ source, origin, data }) => {
-          if (source !== popup || !url.startsWith(`${origin}/`)) return
+          const isTheSameWindow = cfg.desktop || source === popup
+          if (!isTheSameWindow || !url.startsWith(`${origin}/`)) return
           try {
             const {
               id_token: idToken,
@@ -70,7 +73,7 @@ export function useOkta({ clientId, baseUrl }) {
         window.addEventListener('message', handleMessage)
         popup.focus()
       }),
-    [baseUrl, clientId],
+    [baseUrl, cfg.desktop, clientId],
   )
 }
 

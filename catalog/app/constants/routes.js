@@ -8,16 +8,6 @@ export const home = {
   url: ({ q } = {}) => `/${mkSearch({ q })}`,
 }
 
-export const syncDownload = {
-  path: '/sync-download',
-  url: () => '/sync-download',
-}
-
-export const syncUpload = {
-  path: '/sync-upload',
-  url: () => '/sync-upload',
-}
-
 export const install = {
   path: '/install',
   url: () => '/install',
@@ -42,6 +32,11 @@ export const product = {
 export const activate = {
   path: '/activate/:token',
   url: ({ registryUrl, token }) => `${registryUrl}/activate/${token}`,
+}
+
+export const example = {
+  path: '/__example',
+  url: () => '/__example',
 }
 
 // auth
@@ -181,4 +176,10 @@ export const adminBuckets = {
 export const adminSettings = {
   path: '/admin/settings',
   url: () => '/admin/settings',
+}
+
+// storybook
+export const storyBook = {
+  path: '/storybook',
+  url: () => '/storybook',
 }

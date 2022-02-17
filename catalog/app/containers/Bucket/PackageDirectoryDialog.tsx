@@ -3,11 +3,9 @@ import { basename } from 'path'
 import * as R from 'ramda'
 import * as React from 'react'
 import * as RF from 'react-final-form'
-import * as redux from 'react-redux'
 import * as M from '@material-ui/core'
 
 import * as Intercom from 'components/Intercom'
-import * as authSelectors from 'containers/Auth/selectors'
 import * as AWS from 'utils/AWS'
 import * as Data from 'utils/Data'
 import * as NamedRoutes from 'utils/NamedRoutes'
@@ -60,7 +58,7 @@ const useStyles = M.makeStyles((t) => ({
   meta: {
     display: 'flex',
     flexDirection: 'column',
-    marginTop: t.spacing(3),
+    paddingTop: t.spacing(3),
     overflowY: 'auto',
   },
 }))
@@ -97,7 +95,7 @@ function DialogForm({
   validate: validateMetaInput,
   workflowsConfig,
 }: DialogFormProps & PD.SchemaFetcherRenderProps) {
-  const nameValidator = PD.useNameValidator()
+  const nameValidator = PD.useNameValidator(selectedWorkflow)
   const nameExistence = PD.useNameExistence(successor.slug)
   const [nameWarning, setNameWarning] = React.useState<React.ReactNode>('')
   const [metaHeight, setMetaHeight] = React.useState(0)
@@ -139,7 +137,8 @@ function DialogForm({
       } catch (e) {
         // eslint-disable-next-line no-console
         console.log('error creating manifest', e)
-        return { [FF.FORM_ERROR]: e.message || PD.ERROR_MESSAGES.MANIFEST }
+        const errorMessage = e instanceof Error ? e.message : null
+        return { [FF.FORM_ERROR]: errorMessage || PD.ERROR_MESSAGES.MANIFEST }
       }
     },
     [bucket, successor, createPackage, setSuccess, schema, path],
@@ -184,26 +183,30 @@ function DialogForm({
   )
 
   const [editorElement, setEditorElement] = React.useState<HTMLElement | null>(null)
-
+  const resizeObserver = React.useMemo(
+    () =>
+      new window.ResizeObserver((entries) => {
+        const { height } = entries[0]!.contentRect
+        setMetaHeight(height)
+      }),
+    [setMetaHeight],
+  )
   const onFormChange = React.useCallback(
     async ({ values }) => {
-      if (document.body.contains(editorElement)) {
-        setMetaHeight(editorElement!.clientHeight)
-      }
-
       handleNameChange(values.name)
     },
-    [editorElement, handleNameChange, setMetaHeight],
+    [handleNameChange],
   )
 
   React.useEffect(() => {
-    if (document.body.contains(editorElement)) {
-      setMetaHeight(editorElement!.clientHeight)
+    if (editorElement) resizeObserver.observe(editorElement)
+    return () => {
+      if (editorElement) resizeObserver.unobserve(editorElement)
     }
-  }, [editorElement, setMetaHeight])
+  }, [editorElement, resizeObserver])
 
-  const username = redux.useSelector(authSelectors.username)
-  const usernamePrefix = React.useMemo(() => PD.getUsernamePrefix(username), [username])
+  // HACK: FIXME: it triggers name validation with correct workflow
+  const [hideMeta, setHideMeta] = React.useState(false)
 
   return (
     <RF.Form
@@ -241,16 +244,18 @@ function DialogForm({
                 onChange={({ modified, values }) => {
                   if (modified?.workflow && values.workflow !== selectedWorkflow) {
                     setWorkflow(values.workflow)
+
+                    // HACK: FIXME: it triggers name validation with correct workflow
+                    setHideMeta(true)
+                    setTimeout(() => {
+                      setHideMeta(false)
+                    }, 300)
                   }
                 }}
               />
 
               <PD.Container>
                 <PD.LeftColumn>
-                  <M.Typography color={submitting ? 'textSecondary' : undefined}>
-                    Main
-                  </M.Typography>
-
                   <RF.Field
                     component={PD.WorkflowInput}
                     name="workflow"
@@ -265,7 +270,8 @@ function DialogForm({
 
                   <RF.Field
                     component={PD.PackageNameInput}
-                    initialValue={usernamePrefix}
+                    directory={path}
+                    workflow={selectedWorkflow || workflowsConfig}
                     name="name"
                     validate={validators.composeAsync(
                       validators.required,
@@ -275,6 +281,7 @@ function DialogForm({
                     errors={{
                       required: 'Enter a package name',
                       invalid: 'Invalid package name',
+                      pattern: `Name should match "${selectedWorkflow?.packageNamePattern}" regexp`,
                     }}
                     helperText={nameWarning}
                   />
@@ -289,7 +296,7 @@ function DialogForm({
                     }}
                   />
 
-                  {schemaLoading ? (
+                  {schemaLoading || hideMeta ? (
                     <PD.MetaInputSkeleton
                       className={classes.meta}
                       ref={setEditorElement}

@@ -884,7 +884,6 @@ interface ListingProps {
   RootComponent?: React.ElementType<{ className: string }>
   className?: string
   dataGridProps?: Partial<DataGridProps>
-  pageSize?: number
 }
 
 export function Listing({
@@ -900,7 +899,6 @@ export function Listing({
   RootComponent = M.Paper,
   className,
   dataGridProps,
-  pageSize: initialPageSize,
 }: ListingProps) {
   const classes = useStyles()
 
@@ -914,7 +912,7 @@ export function Listing({
   )
 
   const [page, setPage] = React.useState(0)
-  const [pageSize, setPageSize] = React.useState(initialPageSize || 25)
+  const [pageSize, setPageSize] = React.useState(25)
 
   const handlePageChange = React.useCallback(
     ({ page: newPage }: DG.GridPageChangeParams) => {

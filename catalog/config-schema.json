@@ -102,6 +102,10 @@
       "type": "boolean",
       "default": false,
       "description": "Are directories expanded by default"
+    },
+    "build_version": {
+      "type": "string",
+      "description": "Optional"
     }
   },
   "required": [
@@ -117,11 +121,6 @@
     "ssoAuth",
     "ssoProviders"
   ],
-  "additionalProperties": {
-    "build_version": {
-        "type": "string"
-    }
-  },
   "definitions": {
     "Url": {
       "type": "string",
