@@ -46,6 +46,7 @@ export default function DialogSuccess({
   const classes = useStyles()
   const { urls } = NamedRoutes.use()
 
+  // TODO: return full revision from quilt3 CLI
   const isFullHash = hash && hash.length >= 10
   const packageUrl = isFullHash
     ? urls.bucketPackageTree(bucket, name, hash)
@@ -56,7 +57,7 @@ export default function DialogSuccess({
   const bucketLink = (
     <StyledLink to={urls.bucketOverview(bucket)}>s3://{bucket}</StyledLink>
   )
-
+  const defaultBrowseText = isFullHash ? 'Browse package' : 'Browse package revisions'
   return (
     <>
       <M.DialogTitle>{title || 'Push complete'}</M.DialogTitle>
@@ -74,7 +75,7 @@ export default function DialogSuccess({
           variant="contained"
           color="primary"
         >
-          {browseText || 'Browse package'}
+          {browseText || defaultBrowseText}
         </M.Button>
       </M.DialogActions>
     </>
