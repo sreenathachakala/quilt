@@ -432,7 +432,9 @@ const withPreview = (
   if (archived) {
     return callback(AsyncResult.Err(Preview.PreviewError.Archived({ handle })))
   }
-  return Preview.load({ ...handle, mode, packageHandle }, callback)
+  const previewHandle = { ...handle, packageHandle }
+  const previewOptions = { mode, context: Preview.CONTEXT.LISTING }
+  return Preview.load(previewHandle, callback, previewOptions)
 }
 
 interface ObjectAttrs {
