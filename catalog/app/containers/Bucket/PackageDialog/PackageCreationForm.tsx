@@ -380,7 +380,7 @@ function PackageCreationForm({
     />
   )
 
-  const filesInput = (
+  const filesInputWeb = (
     <RF.Field
       className={cx(classes.files, {
         [classes.filesWithError]: !!entriesError,
@@ -411,7 +411,7 @@ function PackageCreationForm({
     />
   )
 
-  const localFolderInput = (
+  const filesInputElectron = (
     <RF.Field
       name="localFolder"
       component={Upload.LocalFolderInput}
@@ -522,11 +522,11 @@ function PackageCreationForm({
 
                   {commitMessageInput}
 
-                  {desktop ? localFolderInput : meta}
+                  {meta}
                 </Layout.LeftColumn>
 
                 <Layout.RightColumn>
-                  {desktop ? meta : filesInput}
+                  {desktop ? filesInputElectron : filesInputWeb}
 
                   <JsonValidationErrors
                     className={classes.filesError}
