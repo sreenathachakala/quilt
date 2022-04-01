@@ -1,4 +1,4 @@
-import concurrent
+import base64
 import functools
 import hashlib
 import itertools
@@ -6,15 +6,12 @@ import logging
 import math
 import os
 import pathlib
-import queue
 import shutil
 import stat
 import threading
-import types
-import warnings
 from codecs import iterdecode
 from collections import defaultdict, deque
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from enum import Enum
 from threading import Lock
 from typing import List, Tuple
@@ -269,14 +266,17 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
                 Body=fd,
                 Bucket=dest_bucket,
                 Key=dest_key,
+                ChecksumAlgorithm='SHA256',
             )
 
         version_id = resp.get('VersionId')  # Absent in unversioned buckets.
-        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id))
+        sha256 = resp['ChecksumSHA256']
+        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, sha256))
     else:
         resp = s3_client.create_multipart_upload(
             Bucket=dest_bucket,
             Key=dest_key,
+            ChecksumAlgorithm='SHA256',
         )
         upload_id = resp['UploadId']
 
@@ -298,10 +298,15 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
                     Bucket=dest_bucket,
                     Key=dest_key,
                     UploadId=upload_id,
-                    PartNumber=part_id
+                    PartNumber=part_id,
+                    ChecksumAlgorithm='SHA256',
                 )
             with lock:
-                parts[i] = {"PartNumber": part_id, "ETag": part["ETag"]}
+                parts[i] = dict(
+                    PartNumber=part_id,
+                    ETag=part["ETag"],
+                    ChecksumSHA256=part['ChecksumSHA256'],
+                )
                 remaining -= 1
                 done = remaining == 0
 
@@ -310,10 +315,11 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
                     Bucket=dest_bucket,
                     Key=dest_key,
                     UploadId=upload_id,
-                    MultipartUpload={"Parts": parts}
+                    MultipartUpload={"Parts": parts},
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
-                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id))
+                sha256 = resp['ChecksumSHA256']
+                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, sha256))
 
         for i, start in enumerate(chunk_offsets):
             end = min(start + chunksize, size)
@@ -408,6 +414,7 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
             CopySource=src_params,
             Bucket=dest_bucket,
             Key=dest_key,
+            ChecksumAlgorithm='SHA256',
         )
 
         if extra_args:
@@ -416,11 +423,13 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
         resp = s3_client.copy_object(**params)
         ctx.progress(size)
         version_id = resp.get('VersionId')  # Absent in unversioned buckets.
-        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id))
+        sha256 = resp['ChecksumSHA256']
+        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, sha256))
     else:
         resp = s3_client.create_multipart_upload(
             Bucket=dest_bucket,
             Key=dest_key,
+            ChecksumAlgorithm='SHA256',
         )
         upload_id = resp['UploadId']
 
@@ -442,10 +451,15 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
                 Bucket=dest_bucket,
                 Key=dest_key,
                 UploadId=upload_id,
-                PartNumber=part_id
+                PartNumber=part_id,
+                ChecksumAlgorithm='SHA256',
             )
             with lock:
-                parts[i] = {"PartNumber": part_id, "ETag": part["CopyPartResult"]["ETag"]}
+                parts[i] = dict(
+                    PartNumber=part_id,
+                    ETag=part["CopyPartResult"]["ETag"],
+                    ChecksumSHA256=part['ChecksumSHA256'],
+                )
                 remaining -= 1
                 done = remaining == 0
 
@@ -456,10 +470,12 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
                     Bucket=dest_bucket,
                     Key=dest_key,
                     UploadId=upload_id,
-                    MultipartUpload={"Parts": parts}
+                    MultipartUpload={"Parts": parts},
+                    ChecksumAlgorithm='SHA256',
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
-                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id))
+                sha256 = resp['ChecksumSHA256']
+                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, sha256))
 
         for i, start in enumerate(chunk_offsets):
             end = min(start + chunksize, size)
@@ -473,7 +489,10 @@ def _upload_or_copy_file(ctx, size, src_path, dest_bucket, dest_path):
         try:
             params = dict(Bucket=dest_bucket, Key=dest_path)
             s3_client = ctx.s3_client_provider.find_correct_client(S3Api.HEAD_OBJECT, dest_bucket, params)
-            resp = s3_client.head_object(**params)
+            resp = s3_client.get_object_attributes(
+                ObjectAttributes=['ETag', 'Checksum', 'ObjectSize'],
+                **params,
+            )
         except ClientError:
             # Destination doesn't exist, so fall through to the normal upload.
             pass
@@ -483,7 +502,7 @@ def _upload_or_copy_file(ctx, size, src_path, dest_bucket, dest_path):
             pass
         else:
             # Check the ETag.
-            dest_size = resp['ContentLength']
+            dest_size = resp['ObjectSize']
             dest_etag = resp['ETag']
             dest_version_id = resp.get('VersionId')
             if size == dest_size and resp.get('ServerSideEncryption') != 'aws:kms':
@@ -491,8 +510,9 @@ def _upload_or_copy_file(ctx, size, src_path, dest_bucket, dest_path):
                 if src_etag == dest_etag:
                     # Nothing more to do. We should not attempt to copy the object because
                     # that would cause the "copy object to itself" error.
+                    sha256 = resp['Checksum'].get('ChecksumSHA256')
                     ctx.progress(size)
-                    ctx.done(PhysicalKey(dest_bucket, dest_path, dest_version_id))
+                    ctx.done(PhysicalKey(dest_bucket, dest_path, dest_version_id, sha256))
                     return  # Optimization succeeded.
 
     # If the optimization didn't happen, do the normal upload.
@@ -897,79 +917,6 @@ def calculate_sha256(src_list: List[PhysicalKey], sizes: List[int]):
     return _calculate_sha256_internal(src_list, sizes, [None] * len(src_list))
 
 
-def _calculate_hash_get_s3_chunks(ctx, src, size):
-    params = dict(Bucket=src.bucket, Key=src.path)
-    if src.version_id is not None:
-        params.update(VersionId=src.version_id)
-    part_size = s3_transfer_config.multipart_chunksize
-    is_multi_part = (
-        size >= s3_transfer_config.multipart_threshold
-        and size > part_size
-    )
-    part_numbers = (
-        range(math.ceil(size / part_size))
-        if is_multi_part else
-        (None,)
-    )
-    s3_client = ctx.find_correct_client(S3Api.GET_OBJECT, src.bucket, params)
-
-    def read_to_queue(part_number, put_to_queue, stopped_event):
-        try:
-            logger.debug('%r part %s: download enqueued', src, part_number)
-            # This semaphore is released in iter_queue() when the part is fully
-            # downloaded and all chunks are retrieved from the queue or if download
-            # fails.
-            ctx.pending_parts_semaphore.acquire()
-            logger.debug('%r part %s: download started', src, part_number)
-            if part_number is not None:
-                start = part_number * part_size
-                end = min(start + part_size, size) - 1
-                part_params = dict(params, Range=f'bytes={start}-{end}')
-            else:
-                part_params = params
-
-            body = s3_client.get_object(**part_params)['Body']
-            for chunk in read_file_chunks(body):
-                put_to_queue(chunk)
-                if stopped_event.is_set():
-                    logger.debug('%r part %s: stopped', src, part_number)
-                    break
-
-            logger.debug('%r part %s: downloaded', src, part_number)
-        finally:
-            put_to_queue(None)
-
-    def iter_queue(part_number):
-        q = queue.Queue()
-        stopped_event = threading.Event()
-        f = ctx.executor.submit(read_to_queue, part_number, q.put_nowait, stopped_event)
-        try:
-            yield
-            yield from iter(q.get, None)
-        except GeneratorExit:
-            if f.cancel():
-                logger.debug('%r part %s: cancelled', src, part_number)
-            else:
-                stopped_event.set()
-        else:
-            f.result()  # Propagate exception from read_to_queue() if any.
-            logger.debug('%r part %s: processed', src, part_number)
-        finally:
-            if not f.cancelled():
-                ctx.pending_parts_semaphore.release()
-                logger.debug('%r part %s: semaphore released', src, part_number)
-
-    generators = deque()
-    for gen in map(iter_queue, part_numbers):
-        # Step into generator, so it will receive GeneratorExit when it's closed
-        # or garbage collected.
-        next(gen)
-        generators.append(gen)
-
-    return itertools.chain.from_iterable(
-        itertools.starmap(generators.popleft, itertools.repeat((), len(part_numbers))))
-
-
 def with_lock(f):
     lock = threading.Lock()
 
@@ -991,77 +938,89 @@ def _calculate_sha256_internal(src_list, sizes, results):
         for size, result in zip(sizes, results)
         if result is None or isinstance(result, Exception)
     )
-    # This controls how many parts can be stored in the memory.
-    # This includes the ones that are being downloaded or hashed.
-    # The number was chosen empirically.
-    s3_max_pending_parts = MAX_CONCURRENCY * 4
     stopped = False
 
-    def get_file_chunks(src, size):
-        with open(src.path, 'rb') as file:
-            yield from read_file_chunks(file)
-
-            current_file_size = file.tell()
-            if current_file_size != size:
-                warnings.warn(
-                    f"Expected the package entry at {src!r} to be {size} B in size, but "
-                    f"found an object which is {current_file_size} B instead. This "
-                    f"indicates that the content of the file changed in between when you "
-                    f"included this  entry in the package (via set or set_dir) and now. "
-                    f"This should be avoided if possible."
-                )
-
-    def _process_url(src, size):
-        hash_obj = hashlib.sha256()
-
-        generator, exceptions_to_retry = (
-            (get_file_chunks(src, size), ())
-            if src.is_local() else
-            (
-                _calculate_hash_get_s3_chunks(s3_context, src, size),
-                (ConnectionError, HTTPClientError, ReadTimeoutError)
-            )
-        )
-        try:
-            for chunk in generator:
-                hash_obj.update(chunk)
-                progress_update(len(chunk))
-                if stopped:
-                    return
-        except exceptions_to_retry as e:
-            return e
-        else:
-            return hash_obj.hexdigest()
-        finally:
-            # We want this generator to be finished immediately,
-            # so it finishes its own tasks.
-            del generator
-
     with tqdm(desc="Hashing", total=total_size, unit='B', unit_scale=True, disable=DISABLE_TQDM) as progress, \
-         ThreadPoolExecutor() as executor, \
-         ThreadPoolExecutor(
-             MAX_CONCURRENCY,
-             thread_name_prefix='s3-executor',
-         ) as s3_executor:
-        s3_context = types.SimpleNamespace(
-            find_correct_client=with_lock(S3ClientProvider().find_correct_client),
-            pending_parts_semaphore=threading.BoundedSemaphore(s3_max_pending_parts),
-            executor=s3_executor,
-        )
+         ThreadPoolExecutor(MAX_CONCURRENCY) as executor:
+
+        find_correct_client = with_lock(S3ClientProvider().find_correct_client)
         progress_update = with_lock(progress.update)
-        future_to_idx = {
-            executor.submit(_process_url, src, size): i
-            for i, (src, size, result) in enumerate(zip(src_list, sizes, results))
-            if result is None or isinstance(result, Exception)
-        }
+
+        def _process_url_part(src: PhysicalKey, offset: int, length: int):
+            hash_obj = hashlib.sha256()
+
+            if src.is_local():
+                bytes_remaining = length
+                with open(src.path, 'rb') as fd:
+                    fd.seek(offset)
+                    while bytes_remaining > 0:
+                        chunk = fd.read(min(s3_transfer_config.io_chunksize, bytes_remaining))
+                        if not chunk:
+                            # Should not happen, but let's not get stuck in an infinite loop.
+                            break
+                        hash_obj.update(chunk)
+                        progress_update(len(chunk))
+                        bytes_remaining -= len(chunk)
+            else:
+                s3_client = find_correct_client(S3Api.GET_OBJECT, src.bucket, params)
+                end = offset + length - 1
+                params = dict(
+                    Bucket=src.bucket,
+                    Key=src.path,
+                    Range=f'bytes={start}-{end}',
+                )
+                if src.version_id is not None:
+                    params.update(VersionId=src.version_id)
+
+                try:
+                    body = s3_client.get_object(**params)['Body']
+                    for chunk in read_file_chunks(body):
+                        hash_obj.update(chunk)
+                        progress_update(len(chunk))
+                        if stopped:
+                            return None
+                except (ConnectionError, HTTPClientError, ReadTimeoutError) as ex:
+                    return ex
+
+            return hash_obj.digest()
+
+        futures: List[List[Future[bytes]]] = []
+
+        for src, size, result in zip(src_list, sizes, results):
+            if result is not None and not isinstance(result, Exception):
+                futures.append([])
+            elif size < s3_transfer_config.multipart_threshold:
+                future = executor.submit(_process_url_part, src, 0, size)
+                futures.append([future])
+            else:
+                adjuster = ChunksizeAdjuster()
+                chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
+                chunk_offsets = list(range(0, size, chunksize))
+
+                src_future_list = []
+                for start in chunk_offsets:
+                    end = min(start + chunksize, size)
+                    future = executor.submit(_process_url_part, src, start, end-start)
+                    src_future_list.append(future)
+
+                futures.append(src_future_list)
+
         try:
-            for future in concurrent.futures.as_completed(future_to_idx):
-                results[future_to_idx.pop(future)] = future.result()
+            for idx, future_list in enumerate(futures):
+                if len(future_list) == 0:
+                    assert result is not None and not isinstance(result, Exception)
+                elif len(future_list) == 1:
+                    future = future_list[0]
+                    results[idx] = base64.b64encode(future.result()).decode()
+                else:
+                    hashes = [future.result() for future in future_list]
+                    hashes_hash = hashlib.sha256(b''.join(hashes)).digest()
+                    results[idx] = f'{base64.b64encode(hashes_hash).decode()}-{len(hashes)}'
         finally:
             stopped = True
-            while future_to_idx:
-                future, idx = future_to_idx.popitem()
-                future.cancel()
+            for future_list in futures:
+                for future in future_list:
+                    future.cancel()
 
     return results
 

@@ -66,6 +66,9 @@ if MANIFEST_MAX_RECORD_SIZE is None:
     MANIFEST_MAX_RECORD_SIZE = DEFAULT_MANIFEST_MAX_RECORD_SIZE
 
 
+HASH_NAME = 'AWS-SHA256'
+
+
 def _fix_docstring(**kwargs):
     def f(wrapped):
         if sys.flags.optimize < 2:
@@ -952,7 +955,7 @@ class Package:
             if isinstance(obj_hash, Exception):
                 exc = obj_hash
             else:
-                entry.hash = dict(type='SHA256', value=obj_hash)
+                entry.hash = dict(type=HASH_NAME, value=obj_hash)
         if exc:
             incomplete_manifest_path = self._dump_manifest_to_scratch()
             msg = "Unable to reach S3 for some hash values. Incomplete manifest saved to {path}."
@@ -1420,13 +1423,9 @@ class Package:
         # Check the top hash and fail early if it's unexpected.
         check_latest_hash()
 
-        self._fix_sha256()
-
         pkg = self.__class__()
         pkg._meta = self._meta
         pkg._set_commit_message(message)
-        top_hash = self._calculate_top_hash(pkg._meta, self.walk())
-        pkg._origin = PackageRevInfo(str(registry.base), name, top_hash)
 
         # Since all that is modified is physical keys, pkg will have the same top hash
         file_list = []
@@ -1440,7 +1439,7 @@ class Package:
             # Copy the datafiles in the package.
             physical_key = entry.physical_key
 
-            new_physical_key = dest_fn(logical_key, entry, top_hash)
+            new_physical_key = dest_fn(logical_key, entry, None)
             if (
                 physical_key.bucket == new_physical_key.bucket and
                 physical_key.path == new_physical_key.path
@@ -1457,7 +1456,13 @@ class Package:
             # Create a new package entry pointing to the new remote key.
             assert versioned_key is not None
             new_entry = entry.with_physical_key(versioned_key)
+            if versioned_key.sha256 is not None:
+                new_entry.hash = dict(type=HASH_NAME, value=versioned_key.sha256)
             pkg._set(logical_key, new_entry)
+
+        pkg._fix_sha256()  # Needed if the files already existed in S3, but we uploaded without ChecksumAlgorithm='SHA256'.
+        top_hash = pkg._calculate_top_hash(pkg._meta, pkg.walk())
+        pkg._origin = PackageRevInfo(str(registry.base), name, top_hash)
 
         def physical_key_is_temp_file(pk):
             if not pk.is_local():
