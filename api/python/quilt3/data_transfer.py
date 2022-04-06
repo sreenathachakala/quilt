@@ -27,10 +27,7 @@ from botocore.exceptions import (
     HTTPClientError,
     ReadTimeoutError,
 )
-from s3transfer.utils import (
-    ChunksizeAdjuster,
-    ReadFileChunk,
-)
+from s3transfer.utils import ChunksizeAdjuster, ReadFileChunk
 from tenacity import (
     retry,
     retry_if_not_result,
@@ -289,7 +286,7 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
             with lock:
                 parts[i] = dict(
                     PartNumber=part_id,
-                    ETag=part["ETag"],
+                    ETag=part['ETag'],
                     ChecksumSHA256=part['ChecksumSHA256'],
                 )
                 remaining -= 1
@@ -300,7 +297,7 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
                     Bucket=dest_bucket,
                     Key=dest_key,
                     UploadId=upload_id,
-                    MultipartUpload={"Parts": parts},
+                    MultipartUpload={'Parts': parts},
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
                 sha256 = resp['ChecksumSHA256']
@@ -442,7 +439,7 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
             with lock:
                 parts[i] = dict(
                     PartNumber=part_id,
-                    ETag=part["CopyPartResult"]["ETag"],
+                    ETag=part['CopyPartResult']['ETag'],
                     ChecksumSHA256=part['ChecksumSHA256'],
                 )
                 remaining -= 1
@@ -455,7 +452,7 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
                     Bucket=dest_bucket,
                     Key=dest_key,
                     UploadId=upload_id,
-                    MultipartUpload={"Parts": parts},
+                    MultipartUpload={'Parts': parts},
                     ChecksumAlgorithm='SHA256',
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
@@ -970,7 +967,7 @@ def _calculate_sha256_internal(src_list, sizes, results):
 
             return hash_obj.digest()
 
-        futures: List[List[Future[bytes]]] = []
+        futures: List[List[Future]] = []
 
         for src, size, result in zip(src_list, sizes, results):
             if result is not None and not isinstance(result, Exception):
@@ -994,6 +991,7 @@ def _calculate_sha256_internal(src_list, sizes, results):
         try:
             for idx, future_list in enumerate(futures):
                 if len(future_list) == 0:
+                    result = results[idx]
                     assert result is not None and not isinstance(result, Exception)
                 elif len(future_list) == 1:
                     future = future_list[0]
