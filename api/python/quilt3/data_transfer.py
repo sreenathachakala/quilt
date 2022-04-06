@@ -965,14 +965,14 @@ def _calculate_sha256_internal(src_list, sizes, results):
 
             return hash_obj.digest()
 
-        futures: List[List[Future]] = []
+        futures: List[Tuple[bool, List[Future]]] = []
 
         for src, size, result in zip(src_list, sizes, results):
             if result is not None and not isinstance(result, Exception):
-                futures.append([])
+                futures.append((False, []))
             elif size < s3_transfer_config.multipart_threshold:
                 future = executor.submit(_process_url_part, src, 0, size)
-                futures.append([future])
+                futures.append((False, [future]))
             else:
                 adjuster = ChunksizeAdjuster()
                 chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
@@ -983,24 +983,24 @@ def _calculate_sha256_internal(src_list, sizes, results):
                     future = executor.submit(_process_url_part, src, start, end-start)
                     src_future_list.append(future)
 
-                futures.append(src_future_list)
+                futures.append((True, src_future_list))
 
         try:
-            for idx, future_list in enumerate(futures):
+            for idx, (is_multipart, future_list) in enumerate(futures):
                 future_results = [future.result() for future in future_list]
                 exceptions = [ex for ex in future_results if isinstance(ex, Exception)]
                 if exceptions:
                     results[idx] = exceptions[0]
                 elif not future_results:
                     assert results[idx] is not None and not isinstance(results[idx], Exception)
-                elif len(future_results) == 1:
+                elif not is_multipart:
                     results[idx] = base64.b64encode(future_results[0]).decode()
                 else:
                     hashes_hash = hashlib.sha256(b''.join(future_results)).digest()
                     results[idx] = f'{base64.b64encode(hashes_hash).decode()}-{len(future_results)}'
         finally:
             stopped = True
-            for future_list in futures:
+            for _, future_list in futures:
                 for future in future_list:
                     future.cancel()
 

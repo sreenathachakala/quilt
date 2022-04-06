@@ -624,11 +624,7 @@ class S3UploadProgressTest(unittest.TestCase):
 
         def handler(request, **kwargs):
             request.body.read(2)
-            mocked_update.assert_called_once_with(2)
-
-            mocked_update.reset_mock()
-            request.body.seek(0)
-            mocked_update.assert_called_once_with(-2)
+            mocked_update.assert_called_once()
 
             raise Success
 
@@ -688,49 +684,64 @@ class S3DownloadTest(QuiltTestCase):
 
 
 class S3HashingTest(QuiltTestCase):
-    data = b'0123456789abcdef'
-    size = len(data)
-
     bucket = 'test-bucket'
     key = 'test-key'
     src = PhysicalKey(bucket, key, None)
 
-    def _hashing_subtest(self, *, threshold, chunksize, data=data):
+    def test_single(self):
+        data = b'0123456789abcdef'
+        size = len(data)
+
+        chunksize = 8 * 1024 * 1024
+
+        ranges = {
+            f'bytes=0-{size-1}': data,
+        }
+
         with self.s3_test_multi_thread_download(
-            self.bucket, self.key, data, threshold=threshold, chunksize=chunksize
+                self.bucket, self.key, ranges, threshold=chunksize, chunksize=chunksize
         ):
-            assert data_transfer.calculate_sha256([self.src], [self.size]) == [data_transfer.calculate_sha256_bytes(self.data)]
+            hash1 = data_transfer.calculate_sha256([self.src], [size])[0]
+            hash2 = data_transfer.calculate_sha256_bytes(data)
+            assert hash1 == hash2
+            assert '-' not in hash1
 
-    def test_single_request(self):
-        params = (
-            (self.size + 1, 5),
-            (self.size, self.size),
-            (self.size, self.size + 1),
-            (5, self.size),
-        )
-        for threshold, chunksize in params:
-            with self.subTest(threshold=threshold, chunksize=chunksize):
-                self._hashing_subtest(threshold=threshold, chunksize=chunksize)
+    def test_multipart(self):
+        # Minimum part size is 5MB.
+        data = b'1234567890abc' * 1024 * 1024
+        size = len(data)
 
-    def test_multi_request(self):
-        params = (
-            (
-                self.size, 5, {
-                    'bytes=0-4': self.data[:5],
-                    'bytes=5-9': self.data[5:10],
-                    'bytes=10-14': self.data[10:15],
-                    'bytes=15-15': self.data[15:],
-                }
-            ),
-            (
-                5, self.size - 1, {
-                    'bytes=0-14': self.data[:15],
-                    'bytes=15-15': self.data[15:],
-                }
-            ),
-        )
-        for threshold, chunksize, data in params:
-            for concurrency in (len(data), 1):
-                with mock.patch('quilt3.data_transfer.s3_transfer_config.max_request_concurrency', concurrency):
-                    with self.subTest(threshold=threshold, chunksize=chunksize, data=data, concurrency=concurrency):
-                        self._hashing_subtest(threshold=threshold, chunksize=chunksize, data=data)
+        chunksize = 5 * 1024 * 1024
+
+        ranges = {
+            f'bytes=0-{chunksize-1}': data[:chunksize],
+            f'bytes={chunksize}-{chunksize*2-1}': data[chunksize:chunksize*2],
+            f'bytes={chunksize*2}-{size-1}': data[chunksize*2:],
+        }
+
+        with self.s3_test_multi_thread_download(
+                self.bucket, self.key, ranges, threshold=chunksize, chunksize=chunksize
+        ):
+            hash1 = data_transfer.calculate_sha256([self.src], [size])[0]
+            hash2 = data_transfer.calculate_sha256_bytes(data)
+            assert hash1 == hash2
+            assert hash1.endswith('-3')
+
+    def test_one_part(self):
+        # Edge case: file length is exactly the threshold, resulting in a 1-part multipart upload.
+        data = b'123456' * 1024 * 1024
+        size = len(data)
+
+        chunksize = 6 * 1024 * 1024
+
+        ranges = {
+            f'bytes=0-{size-1}': data,
+        }
+
+        with self.s3_test_multi_thread_download(
+                self.bucket, self.key, ranges, threshold=chunksize, chunksize=chunksize
+        ):
+            hash1 = data_transfer.calculate_sha256([self.src], [size])[0]
+            hash2 = data_transfer.calculate_sha256_bytes(data)
+            assert hash1 == hash2
+            assert hash1.endswith('-1')

@@ -1460,8 +1460,8 @@ class Package:
             # Create a new package entry pointing to the new remote key.
             assert versioned_key is not None
             new_entry = entry.with_physical_key(versioned_key)
-            if versioned_key.sha256 is not None:
-                new_entry.hash = dict(type=HASH_NAME, value=versioned_key.sha256)
+            if versioned_key.checksum is not None:
+                new_entry.hash = dict(type=HASH_NAME, value=versioned_key.checksum)
             pkg._set(logical_key, new_entry)
 
         # Needed if the files already exist in S3, but were uploaded without ChecksumAlgorithm='SHA256'.
