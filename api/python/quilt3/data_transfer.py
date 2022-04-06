@@ -29,9 +29,7 @@ from botocore.exceptions import (
 )
 from s3transfer.utils import (
     ChunksizeAdjuster,
-    OSUtils,
-    signal_not_transferring,
-    signal_transferring,
+    ReadFileChunk,
 )
 from tenacity import (
     retry,
@@ -156,17 +154,6 @@ class S3ClientProvider:
         boto_session = boto3.Session(botocore_session=botocore_session)
         return boto_session
 
-    def register_signals(self, s3_client):
-        # Enable/disable file read callbacks when uploading files.
-        # Copied from https://github.com/boto/s3transfer/blob/develop/s3transfer/manager.py#L501
-        event_name = 'request-created.s3'
-        s3_client.meta.events.register_first(
-                event_name, signal_not_transferring,
-                unique_id='datatransfer-not-transferring')
-        s3_client.meta.events.register_last(
-                event_name, signal_transferring,
-                unique_id='datatransfer-transferring')
-
     def _build_client(self, get_config):
         session = self.get_boto_session()
         return session.client('s3', config=get_config(session))
@@ -178,12 +165,10 @@ class S3ClientProvider:
                 if session.get_credentials() is None
                 else None
         )
-        self.register_signals(s3_client)
         self._standard_client = s3_client
 
     def _build_unsigned_client(self):
         s3_client = self._build_client(lambda session: Config(signature_version=UNSIGNED))
-        self.register_signals(s3_client)
         self._unsigned_client = s3_client
 
 
@@ -261,7 +246,7 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
     s3_client = ctx.s3_client_provider.standard_client
 
     if size < s3_transfer_config.multipart_threshold:
-        with OSUtils().open_file_chunk_reader(src_path, 0, size, [ctx.progress]) as fd:
+        with ReadFileChunk.from_filename(src_path, 0, size, [ctx.progress]) as fd:
             resp = s3_client.put_object(
                 Body=fd,
                 Bucket=dest_bucket,
@@ -292,7 +277,7 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
         def upload_part(i, start, end):
             nonlocal remaining
             part_id = i + 1
-            with OSUtils().open_file_chunk_reader(src_path, start, end-start, [ctx.progress]) as fd:
+            with ReadFileChunk.from_filename(src_path, start, end-start, [ctx.progress]) as fd:
                 part = s3_client.upload_part(
                     Body=fd,
                     Bucket=dest_bucket,
