@@ -252,8 +252,8 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
             )
 
         version_id = resp.get('VersionId')  # Absent in unversioned buckets.
-        sha256 = resp['ChecksumSHA256']
-        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, sha256))
+        checksum = resp['ChecksumSHA256']
+        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, checksum))
     else:
         resp = s3_client.create_multipart_upload(
             Bucket=dest_bucket,
@@ -300,8 +300,8 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
                     MultipartUpload={'Parts': parts},
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
-                sha256 = resp['ChecksumSHA256']
-                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, sha256))
+                checksum = resp['ChecksumSHA256']
+                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, checksum))
 
         for i, start in enumerate(chunk_offsets):
             end = min(start + chunksize, size)
@@ -405,8 +405,8 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
         resp = s3_client.copy_object(**params)
         ctx.progress(size)
         version_id = resp.get('VersionId')  # Absent in unversioned buckets.
-        sha256 = resp['ChecksumSHA256']
-        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, sha256))
+        checksum = resp['CopyObjectResult']['ChecksumSHA256']
+        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, checksum))
     else:
         resp = s3_client.create_multipart_upload(
             Bucket=dest_bucket,
@@ -434,13 +434,12 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
                 Key=dest_key,
                 UploadId=upload_id,
                 PartNumber=part_id,
-                ChecksumAlgorithm='SHA256',
             )
             with lock:
                 parts[i] = dict(
                     PartNumber=part_id,
                     ETag=part['CopyPartResult']['ETag'],
-                    ChecksumSHA256=part['ChecksumSHA256'],
+                    ChecksumSHA256=part['CopyPartResult']['ChecksumSHA256'],
                 )
                 remaining -= 1
                 done = remaining == 0
@@ -453,11 +452,10 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
                     Key=dest_key,
                     UploadId=upload_id,
                     MultipartUpload={'Parts': parts},
-                    ChecksumAlgorithm='SHA256',
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
-                sha256 = resp['ChecksumSHA256']
-                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, sha256))
+                checksum = resp['ChecksumSHA256']
+                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, checksum))
 
         for i, start in enumerate(chunk_offsets):
             end = min(start + chunksize, size)
@@ -492,9 +490,9 @@ def _upload_or_copy_file(ctx, size, src_path, dest_bucket, dest_path):
                 if src_etag == dest_etag:
                     # Nothing more to do. We should not attempt to copy the object because
                     # that would cause the "copy object to itself" error.
-                    sha256 = resp['Checksum'].get('ChecksumSHA256')
+                    checksum = resp['Checksum'].get('ChecksumSHA256')
                     ctx.progress(size)
-                    ctx.done(PhysicalKey(dest_bucket, dest_path, dest_version_id, sha256))
+                    ctx.done(PhysicalKey(dest_bucket, dest_path, dest_version_id, checksum))
                     return  # Optimization succeeded.
 
     # If the optimization didn't happen, do the normal upload.
@@ -989,16 +987,17 @@ def _calculate_sha256_internal(src_list, sizes, results):
 
         try:
             for idx, future_list in enumerate(futures):
-                if len(future_list) == 0:
-                    result = results[idx]
-                    assert result is not None and not isinstance(result, Exception)
-                elif len(future_list) == 1:
-                    future = future_list[0]
-                    results[idx] = base64.b64encode(future.result()).decode()
+                future_results = [future.result() for future in future_list]
+                exceptions = [ex for ex in future_results if isinstance(ex, Exception)]
+                if exceptions:
+                    results[idx] = exceptions[0]
+                elif not future_results:
+                    assert results[idx] is not None and not isinstance(results[idx], Exception)
+                elif len(future_results) == 1:
+                    results[idx] = base64.b64encode(future_results[0]).decode()
                 else:
-                    hashes = [future.result() for future in future_list]
-                    hashes_hash = hashlib.sha256(b''.join(hashes)).digest()
-                    results[idx] = f'{base64.b64encode(hashes_hash).decode()}-{len(hashes)}'
+                    hashes_hash = hashlib.sha256(b''.join(future_results)).digest()
+                    results[idx] = f'{base64.b64encode(hashes_hash).decode()}-{len(future_results)}'
         finally:
             stopped = True
             for future_list in futures:

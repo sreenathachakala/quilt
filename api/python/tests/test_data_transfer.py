@@ -1,6 +1,5 @@
 """ Testing for data_transfer.py """
 
-import hashlib
 import io
 import os
 import pathlib
@@ -165,11 +164,13 @@ class DataTransferTest(QuiltTestCase):
         self.s3_stubber.add_response(
             method='put_object',
             service_response={
+                'ChecksumSHA256': '123456',
             },
             expected_params={
                 'Body': ANY,
                 'Bucket': 'example',
                 'Key': 'foo.csv',
+                'ChecksumAlgorithm': 'SHA256',
             }
         )
 
@@ -183,11 +184,13 @@ class DataTransferTest(QuiltTestCase):
         self.s3_stubber.add_response(
             method='put_object',
             service_response={
+                'ChecksumSHA256': '123456',
             },
             expected_params={
                 'Body': ANY,
                 'Bucket': 'example1',
                 'Key': 'foo.csv',
+                'ChecksumAlgorithm': 'SHA256',
             }
         )
 
@@ -195,12 +198,14 @@ class DataTransferTest(QuiltTestCase):
         self.s3_stubber.add_response(
             method='put_object',
             service_response={
-                'VersionId': 'v123'
+                'VersionId': 'v123',
+                'ChecksumSHA256': '123456',
             },
             expected_params={
                 'Body': ANY,
                 'Bucket': 'example2',
                 'Key': 'foo.txt',
+                'ChecksumAlgorithm': 'SHA256',
             }
         )
 
@@ -218,23 +223,26 @@ class DataTransferTest(QuiltTestCase):
         path = DATA_DIR / 'large_file.npy'
 
         self.s3_stubber.add_client_error(
-            method='head_object',
+            method='get_object_attributes',
             http_status_code=404,
             expected_params={
                 'Bucket': 'example',
                 'Key': 'large_file.npy',
+                'ObjectAttributes': ['ETag', 'Checksum', 'ObjectSize'],
             }
         )
 
         self.s3_stubber.add_response(
             method='put_object',
             service_response={
-                'VersionId': 'v1'
+                'VersionId': 'v1',
+                'ChecksumSHA256': '123456',
             },
             expected_params={
                 'Body': ANY,
                 'Bucket': 'example',
                 'Key': 'large_file.npy',
+                'ChecksumAlgorithm': 'SHA256',
             }
         )
 
@@ -247,15 +255,17 @@ class DataTransferTest(QuiltTestCase):
         path = DATA_DIR / 'large_file.npy'
 
         self.s3_stubber.add_response(
-            method='head_object',
+            method='get_object_attributes',
             service_response={
-                'ContentLength': path.stat().st_size,
+                'ObjectSize': path.stat().st_size,
                 'ETag': data_transfer._calculate_etag(path),
+                'Checksum': {},
                 'VersionId': 'v1',
             },
             expected_params={
                 'Bucket': 'example',
                 'Key': 'large_file.npy',
+                'ObjectAttributes': ['ETag', 'Checksum', 'ObjectSize'],
             }
         )
 
@@ -268,27 +278,31 @@ class DataTransferTest(QuiltTestCase):
         path = DATA_DIR / 'large_file.npy'
 
         self.s3_stubber.add_response(
-            method='head_object',
+            method='get_object_attributes',
             service_response={
-                'ContentLength': path.stat().st_size,
+                'ObjectSize': path.stat().st_size,
                 'ETag': '"123"',
+                'Checksum': {},
                 'VersionId': 'v1',
             },
             expected_params={
                 'Bucket': 'example',
                 'Key': 'large_file.npy',
+                'ObjectAttributes': ['ETag', 'Checksum', 'ObjectSize'],
             }
         )
 
         self.s3_stubber.add_response(
             method='put_object',
             service_response={
-                'VersionId': 'v2'
+                'VersionId': 'v2',
+                'ChecksumSHA256': '123456',
             },
             expected_params={
                 'Body': ANY,
                 'Bucket': 'example',
                 'Key': 'large_file.npy',
+                'ChecksumAlgorithm': 'SHA256',
             }
         )
 
@@ -312,11 +326,12 @@ class DataTransferTest(QuiltTestCase):
             fd.write(b'!')
 
         self.s3_stubber.add_client_error(
-            method='head_object',
+            method='get_object_attributes',
             http_status_code=404,
             expected_params={
                 'Bucket': 'example',
                 'Key': name,
+                'ObjectAttributes': ['ETag', 'Checksum', 'ObjectSize'],
             }
         )
 
@@ -328,6 +343,7 @@ class DataTransferTest(QuiltTestCase):
             expected_params={
                 'Bucket': 'example',
                 'Key': name,
+                'ChecksumAlgorithm': 'SHA256',
             }
         )
 
@@ -335,20 +351,24 @@ class DataTransferTest(QuiltTestCase):
             self.s3_stubber.add_response(
                 method='upload_part',
                 service_response={
-                    'ETag': 'etag%d' % part_num
+                    'ETag': 'etag%d' % part_num,
+                    'ChecksumSHA256': 'hash%d' % part_num,
                 },
                 expected_params={
                     'Bucket': 'example',
                     'Key': name,
                     'UploadId': '123',
                     'Body': ANY,
-                    'PartNumber': part_num
+                    'PartNumber': part_num,
+                    'ChecksumAlgorithm': 'SHA256',
                 }
             )
 
         self.s3_stubber.add_response(
             method='complete_multipart_upload',
-            service_response={},
+            service_response={
+                'ChecksumSHA256': '123456',
+            },
             expected_params={
                 'Bucket': 'example',
                 'Key': name,
@@ -356,6 +376,7 @@ class DataTransferTest(QuiltTestCase):
                 'MultipartUpload': {
                     'Parts': [{
                         'ETag': 'etag%d' % i,
+                        'ChecksumSHA256': 'hash%d' % i,
                         'PartNumber': i
                     } for i in range(1, chunks+1)]
                 }
@@ -387,6 +408,7 @@ class DataTransferTest(QuiltTestCase):
             expected_params={
                 'Bucket': 'example2',
                 'Key': 'large_file2.npy',
+                'ChecksumAlgorithm': 'SHA256',
             }
         )
 
@@ -395,7 +417,8 @@ class DataTransferTest(QuiltTestCase):
                 method='upload_part_copy',
                 service_response={
                     'CopyPartResult': {
-                        'ETag': 'etag%d' % part_num
+                        'ETag': 'etag%d' % part_num,
+                        'ChecksumSHA256': 'hash%d' % part_num,
                     }
                 },
                 expected_params={
@@ -416,7 +439,9 @@ class DataTransferTest(QuiltTestCase):
 
         self.s3_stubber.add_response(
             method='complete_multipart_upload',
-            service_response={},
+            service_response={
+                'ChecksumSHA256': '123456',
+            },
             expected_params={
                 'Bucket': 'example2',
                 'Key': 'large_file2.npy',
@@ -424,6 +449,7 @@ class DataTransferTest(QuiltTestCase):
                 'MultipartUpload': {
                     'Parts': [{
                         'ETag': 'etag%d' % i,
+                        'ChecksumSHA256': 'hash%d' % i,
                         'PartNumber': i
                     } for i in range(1, chunks+1)]
                 }
@@ -664,7 +690,6 @@ class S3DownloadTest(QuiltTestCase):
 class S3HashingTest(QuiltTestCase):
     data = b'0123456789abcdef'
     size = len(data)
-    hasher = hashlib.sha256
 
     bucket = 'test-bucket'
     key = 'test-key'
@@ -674,7 +699,7 @@ class S3HashingTest(QuiltTestCase):
         with self.s3_test_multi_thread_download(
             self.bucket, self.key, data, threshold=threshold, chunksize=chunksize
         ):
-            assert data_transfer.calculate_sha256([self.src], [self.size]) == [self.hasher(self.data).hexdigest()]
+            assert data_transfer.calculate_sha256([self.src], [self.size]) == [data_transfer.calculate_sha256_bytes(self.data)]
 
     def test_single_request(self):
         params = (

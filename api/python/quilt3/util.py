@@ -121,9 +121,9 @@ class URLParseError(ValueError):
 
 
 class PhysicalKey:
-    __slots__ = ('bucket', 'path', 'version_id', 'sha256')
+    __slots__ = ('bucket', 'path', 'version_id', 'checksum')
 
-    def __init__(self, bucket, path, version_id, sha256=None):
+    def __init__(self, bucket, path, version_id, checksum=None):
         """
         For internal use only; call from_path or from_url instead.
         """
@@ -142,7 +142,7 @@ class PhysicalKey:
         self.bucket = bucket
         self.path = path
         self.version_id = version_id
-        self.sha256 = sha256
+        self.checksum = checksum
 
     @classmethod
     def from_url(cls, url):
