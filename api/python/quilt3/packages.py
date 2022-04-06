@@ -25,6 +25,7 @@ from . import util, workflows
 from .backends import get_package_registry
 from .data_transfer import (
     calculate_sha256,
+    calculate_sha256_bytes,
     copy_file,
     copy_file_list,
     get_bytes,
@@ -199,9 +200,12 @@ class PackageEntry:
         """
         if self.hash is None:
             raise QuiltException("Hash missing - need to build the package")
-        if self.hash.get('type') != 'SHA256':
+        if self.hash.get('type') == 'SHA256':
+            digest = hashlib.sha256(read_bytes).hexdigest()
+        elif self.hash.get('type') == HASH_NAME:
+            digest = calculate_sha256_bytes(read_bytes)
+        else:
             raise NotImplementedError
-        digest = hashlib.sha256(read_bytes).hexdigest()
         if digest != self.hash.get('value'):
             raise QuiltException("Hash validation failed")
 
@@ -1460,7 +1464,9 @@ class Package:
                 new_entry.hash = dict(type=HASH_NAME, value=versioned_key.sha256)
             pkg._set(logical_key, new_entry)
 
-        pkg._fix_sha256()  # Needed if the files already existed in S3, but we uploaded without ChecksumAlgorithm='SHA256'.
+        # Needed if the files already exist in S3, but were uploaded without ChecksumAlgorithm='SHA256'.
+        pkg._fix_sha256()
+
         top_hash = pkg._calculate_top_hash(pkg._meta, pkg.walk())
         pkg._origin = PackageRevInfo(str(registry.base), name, top_hash)
 

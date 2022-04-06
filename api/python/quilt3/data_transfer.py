@@ -978,10 +978,9 @@ def _calculate_sha256_internal(src_list, sizes, results):
             else:
                 adjuster = ChunksizeAdjuster()
                 chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
-                chunk_offsets = list(range(0, size, chunksize))
 
                 src_future_list = []
-                for start in chunk_offsets:
+                for start in range(0, size, chunksize):
                     end = min(start + chunksize, size)
                     future = executor.submit(_process_url_part, src, start, end-start)
                     src_future_list.append(future)
@@ -1007,6 +1006,25 @@ def _calculate_sha256_internal(src_list, sizes, results):
                     future.cancel()
 
     return results
+
+
+def calculate_sha256_bytes(data: bytes):
+    size = len(data)
+    if size < s3_transfer_config.multipart_threshold:
+        result = base64.b64encode(hashlib.sha256(data).digest()).decode()
+    else:
+        adjuster = ChunksizeAdjuster()
+        chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
+
+        hashes = []
+        for start in range(0, size, chunksize):
+            end = min(start + chunksize, size)
+            hashes.append(hashlib.sha256(data[start:end]).digest())
+
+        hashes_hash = hashlib.sha256(b''.join(hashes)).digest()
+        result = f'{base64.b64encode(hashes_hash).decode()}-{len(hashes)}'
+
+    return result
 
 
 def select(src, query, meta=None, raw=False, **kwargs):
