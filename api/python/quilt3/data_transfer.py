@@ -962,15 +962,16 @@ def _calculate_sha256_internal(src_list, sizes, results):
                         progress_update(len(chunk))
                         bytes_remaining -= len(chunk)
             else:
-                s3_client = find_correct_client(S3Api.GET_OBJECT, src.bucket, params)
                 end = offset + length - 1
                 params = dict(
                     Bucket=src.bucket,
                     Key=src.path,
-                    Range=f'bytes={start}-{end}',
+                    Range=f'bytes={offset}-{end}',
                 )
                 if src.version_id is not None:
                     params.update(VersionId=src.version_id)
+
+                s3_client = find_correct_client(S3Api.GET_OBJECT, src.bucket, params)
 
                 try:
                     body = s3_client.get_object(**params)['Body']
