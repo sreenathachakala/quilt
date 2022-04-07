@@ -1329,7 +1329,7 @@ class Package:
             name: name for package in registry
             dest: where to copy the objects in the package
                 Must be either an S3 URI prefix in the registry bucket, or a callable that takes
-                logical_key, package_entry, and top_hash and returns S3 URI. S3 URIs format is s3://$bucket/$key.
+                logical_key and package_entry, and returns S3 URI. S3 URIs format is `s3://$bucket/$key`.
             registry: registry where to create the new package
             message: the commit message for the new package
             selector_fn: An optional function that determines which package entries should be copied to S3.
@@ -1443,7 +1443,7 @@ class Package:
             # Copy the datafiles in the package.
             physical_key = entry.physical_key
 
-            new_physical_key = dest_fn(logical_key, entry, None)
+            new_physical_key = dest_fn(logical_key, entry)
             if (
                 physical_key.bucket == new_physical_key.bucket and
                 physical_key.path == new_physical_key.path
