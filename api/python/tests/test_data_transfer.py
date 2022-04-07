@@ -216,8 +216,8 @@ class DataTransferTest(QuiltTestCase):
                 (PhysicalKey.from_path(path2), PhysicalKey.from_url('s3://example2/foo.txt'), path2.stat().st_size),
             ])
 
-            assert urls[0] == PhysicalKey.from_url('s3://example1/foo.csv')
-            assert urls[1] == PhysicalKey.from_url('s3://example2/foo.txt?versionId=v123')
+            assert urls[0] == (PhysicalKey.from_url('s3://example1/foo.csv'), '123456')
+            assert urls[1] == (PhysicalKey.from_url('s3://example2/foo.txt?versionId=v123'), '123456')
 
     def test_upload_large_file(self):
         path = DATA_DIR / 'large_file.npy'
@@ -249,7 +249,7 @@ class DataTransferTest(QuiltTestCase):
         urls = data_transfer.copy_file_list([
             (PhysicalKey.from_path(path), PhysicalKey.from_url('s3://example/large_file.npy'), path.stat().st_size),
         ])
-        assert urls[0] == PhysicalKey.from_url('s3://example/large_file.npy?versionId=v1')
+        assert urls[0] == (PhysicalKey.from_url('s3://example/large_file.npy?versionId=v1'), '123456')
 
     def test_upload_large_file_etag_match(self):
         path = DATA_DIR / 'large_file.npy'
@@ -272,7 +272,7 @@ class DataTransferTest(QuiltTestCase):
         urls = data_transfer.copy_file_list([
             (PhysicalKey.from_path(path), PhysicalKey.from_url('s3://example/large_file.npy'), path.stat().st_size),
         ])
-        assert urls[0] == PhysicalKey.from_url('s3://example/large_file.npy?versionId=v1')
+        assert urls[0] == (PhysicalKey.from_url('s3://example/large_file.npy?versionId=v1'), None)
 
     def test_upload_large_file_etag_mismatch(self):
         path = DATA_DIR / 'large_file.npy'
@@ -309,7 +309,7 @@ class DataTransferTest(QuiltTestCase):
         urls = data_transfer.copy_file_list([
             (PhysicalKey.from_path(path), PhysicalKey.from_url('s3://example/large_file.npy'), path.stat().st_size),
         ])
-        assert urls[0] == PhysicalKey.from_url('s3://example/large_file.npy?versionId=v2')
+        assert urls[0] == (PhysicalKey.from_url('s3://example/large_file.npy?versionId=v2'), '123456')
 
     def test_multipart_upload(self):
         name = 'very_large_file.bin'

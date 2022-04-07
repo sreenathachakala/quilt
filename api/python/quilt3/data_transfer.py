@@ -236,7 +236,7 @@ def _copy_local_file(ctx, size, src_path, dest_path):
     ctx.progress(size)
     shutil.copymode(src_path, dest_path)
 
-    ctx.done(PhysicalKey.from_path(dest_path))
+    ctx.done(PhysicalKey.from_path(dest_path), None)
 
 
 def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
@@ -253,7 +253,7 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
 
         version_id = resp.get('VersionId')  # Absent in unversioned buckets.
         checksum = resp['ChecksumSHA256']
-        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, checksum))
+        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id), checksum)
     else:
         resp = s3_client.create_multipart_upload(
             Bucket=dest_bucket,
@@ -301,7 +301,7 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
                 checksum = resp['ChecksumSHA256']
-                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, checksum))
+                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id), checksum)
 
         for i, start in enumerate(chunk_offsets):
             end = min(start + chunksize, size)
@@ -372,7 +372,7 @@ def _download_file(ctx, size, src_bucket, src_key, src_version, dest_path):
             remaining_counter -= 1
             done = remaining_counter == 0
         if done:
-            ctx.done(PhysicalKey.from_path(dest_path))
+            ctx.done(PhysicalKey.from_path(dest_path), None)
 
     for part_number in part_numbers:
         ctx.run(download_part, part_number)
@@ -406,7 +406,7 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
         ctx.progress(size)
         version_id = resp.get('VersionId')  # Absent in unversioned buckets.
         checksum = resp['CopyObjectResult']['ChecksumSHA256']
-        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, checksum))
+        ctx.done(PhysicalKey(dest_bucket, dest_key, version_id), checksum)
     else:
         resp = s3_client.create_multipart_upload(
             Bucket=dest_bucket,
@@ -455,7 +455,7 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
                 )
                 version_id = resp.get('VersionId')  # Absent in unversioned buckets.
                 checksum = resp['ChecksumSHA256']
-                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id, checksum))
+                ctx.done(PhysicalKey(dest_bucket, dest_key, version_id), checksum)
 
         for i, start in enumerate(chunk_offsets):
             end = min(start + chunksize, size)
@@ -492,7 +492,7 @@ def _upload_or_copy_file(ctx, size, src_path, dest_bucket, dest_path):
                     # that would cause the "copy object to itself" error.
                     checksum = resp['Checksum'].get('ChecksumSHA256')
                     ctx.progress(size)
-                    ctx.done(PhysicalKey(dest_bucket, dest_path, dest_version_id, checksum))
+                    ctx.done(PhysicalKey(dest_bucket, dest_path, dest_version_id), checksum)
                     return  # Optimization succeeded.
 
     # If the optimization didn't happen, do the normal upload.
@@ -562,11 +562,11 @@ def _copy_file_list_internal(file_list, results, message, callback, exceptions_t
             if stopped:
                 raise Exception("Interrupted")
 
-            def done_callback(value):
+            def done_callback(value, checksum):
                 assert value is not None
                 with lock:
                     assert results[idx] is None
-                    results[idx] = value
+                    results[idx] = (value, checksum)
                 if callback is not None:
                     callback(src, dest, size)
 

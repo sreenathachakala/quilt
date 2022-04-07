@@ -44,7 +44,7 @@ LOCAL_REGISTRY = Path('local_registry')  # Set by QuiltTestCase
 
 
 def _mock_copy_file_list(file_list, callback=None, message=None):
-    return [key for _, key, _ in file_list]
+    return [(key, None) for _, key, _ in file_list]
 
 
 class PackageTest(QuiltTestCase):
