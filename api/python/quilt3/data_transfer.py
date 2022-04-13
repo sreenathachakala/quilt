@@ -469,10 +469,7 @@ def _upload_or_copy_file(ctx, size, src_path, dest_bucket, dest_path):
         try:
             params = dict(Bucket=dest_bucket, Key=dest_path)
             s3_client = ctx.s3_client_provider.find_correct_client(S3Api.HEAD_OBJECT, dest_bucket, params)
-            resp = s3_client.get_object_attributes(
-                ObjectAttributes=['ETag', 'Checksum', 'ObjectSize'],
-                **params,
-            )
+            resp = s3_client.head_object(**params, ChecksumMode='ENABLED')
         except ClientError:
             # Destination doesn't exist, so fall through to the normal upload.
             pass
@@ -482,7 +479,7 @@ def _upload_or_copy_file(ctx, size, src_path, dest_bucket, dest_path):
             pass
         else:
             # Check the ETag.
-            dest_size = resp['ObjectSize']
+            dest_size = resp['ContentLength']
             dest_etag = resp['ETag']
             dest_version_id = resp.get('VersionId')
             if size == dest_size and resp.get('ServerSideEncryption') != 'aws:kms':
@@ -490,7 +487,7 @@ def _upload_or_copy_file(ctx, size, src_path, dest_bucket, dest_path):
                 if src_etag == dest_etag:
                     # Nothing more to do. We should not attempt to copy the object because
                     # that would cause the "copy object to itself" error.
-                    checksum = resp['Checksum'].get('ChecksumSHA256')
+                    checksum = resp.get('ChecksumSHA256')
                     ctx.progress(size)
                     ctx.done(PhysicalKey(dest_bucket, dest_path, dest_version_id), checksum)
                     return  # Optimization succeeded.

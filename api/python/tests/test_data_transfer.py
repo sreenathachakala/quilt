@@ -223,12 +223,12 @@ class DataTransferTest(QuiltTestCase):
         path = DATA_DIR / 'large_file.npy'
 
         self.s3_stubber.add_client_error(
-            method='get_object_attributes',
+            method='head_object',
             http_status_code=404,
             expected_params={
                 'Bucket': 'example',
                 'Key': 'large_file.npy',
-                'ObjectAttributes': ['ETag', 'Checksum', 'ObjectSize'],
+                'ChecksumMode': 'ENABLED',
             }
         )
 
@@ -255,17 +255,16 @@ class DataTransferTest(QuiltTestCase):
         path = DATA_DIR / 'large_file.npy'
 
         self.s3_stubber.add_response(
-            method='get_object_attributes',
+            method='head_object',
             service_response={
-                'ObjectSize': path.stat().st_size,
+                'ContentLength': path.stat().st_size,
                 'ETag': data_transfer._calculate_etag(path),
-                'Checksum': {},
                 'VersionId': 'v1',
             },
             expected_params={
                 'Bucket': 'example',
                 'Key': 'large_file.npy',
-                'ObjectAttributes': ['ETag', 'Checksum', 'ObjectSize'],
+                'ChecksumMode': 'ENABLED',
             }
         )
 
@@ -278,17 +277,16 @@ class DataTransferTest(QuiltTestCase):
         path = DATA_DIR / 'large_file.npy'
 
         self.s3_stubber.add_response(
-            method='get_object_attributes',
+            method='head_object',
             service_response={
-                'ObjectSize': path.stat().st_size,
+                'ContentLength': path.stat().st_size,
                 'ETag': '"123"',
-                'Checksum': {},
                 'VersionId': 'v1',
             },
             expected_params={
                 'Bucket': 'example',
                 'Key': 'large_file.npy',
-                'ObjectAttributes': ['ETag', 'Checksum', 'ObjectSize'],
+                'ChecksumMode': 'ENABLED',
             }
         )
 
@@ -326,12 +324,12 @@ class DataTransferTest(QuiltTestCase):
             fd.write(b'!')
 
         self.s3_stubber.add_client_error(
-            method='get_object_attributes',
+            method='head_object',
             http_status_code=404,
             expected_params={
                 'Bucket': 'example',
                 'Key': name,
-                'ObjectAttributes': ['ETag', 'Checksum', 'ObjectSize'],
+                'ChecksumMode': 'ENABLED',
             }
         )
 
