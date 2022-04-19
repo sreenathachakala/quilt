@@ -5,6 +5,7 @@ import * as R from 'ramda'
 import * as React from 'react'
 import type * as RF from 'react-final-form'
 import * as redux from 'react-redux'
+import * as urql from 'urql'
 import * as M from '@material-ui/core'
 
 import * as authSelectors from 'containers/Auth/selectors'
@@ -19,6 +20,7 @@ import * as workflows from 'utils/workflows'
 
 import * as requests from '../requests'
 import SelectWorkflow from './SelectWorkflow'
+import PACKAGE_EXISTS_QUERY from './gql/PackageExists.generated'
 
 export const MAX_UPLOAD_SIZE = 20 * 1000 * 1000 * 1000 // 20GB
 export const MAX_S3_SIZE = 50 * 1000 * 1000 * 1000 // 50GB
@@ -32,6 +34,25 @@ export const ERROR_MESSAGES = {
 export const getNormalizedPath = (f: { path?: string; name: string }) => {
   const p = f.path || f.name
   return p.startsWith('/') ? p.substring(1) : p
+}
+
+export const mkFormError = (err: React.ReactNode) => ({ [FORM_ERROR]: err })
+
+interface InputError {
+  path: string | null
+  message: string
+}
+
+export function mapInputErrors(
+  inputErrors: Readonly<InputError[]>,
+  mapping: Record<string, string> = {},
+) {
+  const formErrors: Record<string, string> = {}
+  for (let err of inputErrors) {
+    const key = err.path && err.path in mapping ? mapping[err.path] : FORM_ERROR
+    formErrors[key] = err.message
+  }
+  return formErrors
 }
 
 export async function hashFile(file: File) {
@@ -132,23 +153,24 @@ export function useNameValidator(workflow?: workflows.Workflow) {
 export function useNameExistence(bucket: string) {
   const [counter, setCounter] = React.useState(0)
   const inc = React.useCallback(() => setCounter(R.inc), [setCounter])
-
-  const s3 = AWS.S3.use()
+  const client = urql.useClient()
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const validate = React.useCallback(
     cacheDebounce(async (name: string) => {
       if (name) {
-        const packageExists = await requests.ensurePackageIsPresent({
-          s3,
-          bucket,
-          name,
-        })
-        if (packageExists) return 'exists'
+        const res = await client
+          .query(
+            PACKAGE_EXISTS_QUERY,
+            { bucket, name },
+            { requestPolicy: 'network-only' },
+          )
+          .toPromise()
+        if (res.data?.package) return 'exists'
       }
       return undefined
     }, 200),
-    [bucket, counter, s3],
+    [bucket, counter, client],
   )
 
   return React.useMemo(() => ({ validate, inc }), [validate, inc])
@@ -377,18 +399,14 @@ export type SchemaFetcherRenderProps =
 const noopValidator: MetaValidator = () => undefined
 
 interface SchemaFetcherProps {
-  manifest?: {
-    workflow?: {
-      id?: string
-    }
-  }
+  initialWorkflowId?: string
   workflow?: workflows.Workflow
   workflowsConfig: workflows.WorkflowsConfig
   children: (props: SchemaFetcherRenderProps) => React.ReactElement
 }
 
 export function SchemaFetcher({
-  manifest,
+  initialWorkflowId,
   workflow,
   workflowsConfig,
   children,
@@ -396,16 +414,14 @@ export function SchemaFetcher({
   const s3 = AWS.S3.use()
   const sentry = Sentry.use()
 
-  const slug = manifest?.workflow?.id
-
   const initialWorkflow = React.useMemo(() => {
     // reuse workflow from previous revision if it's still present in the config
-    if (slug) {
-      const w = workflowsConfig.workflows.find(R.propEq('slug', slug))
+    if (initialWorkflowId) {
+      const w = workflowsConfig.workflows.find(R.propEq('slug', initialWorkflowId))
       if (w) return w
     }
     return defaultWorkflowFromConfig(workflowsConfig)
-  }, [slug, workflowsConfig])
+  }, [initialWorkflowId, workflowsConfig])
 
   const selectedWorkflow = workflow || initialWorkflow
 
@@ -449,15 +465,16 @@ export function SchemaFetcher({
 }
 
 export function useCryptoApiValidation() {
-  return React.useCallback(() => {
-    const isCryptoApiAvailable =
-      window.crypto && window.crypto.subtle && window.crypto.subtle.digest
-    return {
-      [FORM_ERROR]: !isCryptoApiAvailable
-        ? 'Quilt requires the Web Cryptography API. Please try another browser.'
-        : undefined,
-    }
-  }, [])
+  return React.useCallback(
+    () =>
+      !!window.crypto?.subtle?.digest
+        ? {}
+        : mkFormError(
+            'Quilt requires the Web Cryptography API. Please try another browser.',
+          ),
+
+    [],
+  )
 }
 
 export function calcDialogHeight(

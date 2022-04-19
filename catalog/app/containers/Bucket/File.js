@@ -14,6 +14,7 @@ import Sparkline from 'components/Sparkline'
 import * as Notifications from 'containers/Notifications'
 import * as AWS from 'utils/AWS'
 import AsyncResult from 'utils/AsyncResult'
+import * as BucketPreferences from 'utils/BucketPreferences'
 import * as Config from 'utils/Config'
 import { useData } from 'utils/Data'
 import MetaTitle from 'utils/MetaTitle'
@@ -27,6 +28,7 @@ import { getBreadCrumbs, up, decode, handleToHttpsUri } from 'utils/s3paths'
 import { readableBytes, readableQuantity } from 'utils/string'
 
 import Code from './Code'
+import FileProperties from './FileProperties'
 import * as FileView from './FileView'
 import Section from './Section'
 import renderPreview from './renderPreview'
@@ -291,6 +293,8 @@ function CenteredProgress() {
 
 const useStyles = M.makeStyles((t) => ({
   actions: {
+    alignItems: 'center',
+    display: 'flex',
     marginLeft: 'auto',
   },
   at: {
@@ -303,6 +307,9 @@ const useStyles = M.makeStyles((t) => ({
     ...t.typography.body1,
     maxWidth: '100%',
     overflowWrap: 'break-word',
+  },
+  fileProperties: {
+    marginTop: '2px',
   },
   name: {
     ...t.typography.body1,
@@ -331,6 +338,7 @@ export default function File({
   const history = useHistory()
   const { analyticsBucket, noDownload } = Config.use()
   const s3 = AWS.S3.use()
+  const preferences = BucketPreferences.use()
 
   const path = decode(encodedPath)
 
@@ -340,8 +348,8 @@ export default function File({
         label: 'Python',
         hl: 'python',
         contents: dedent`
-          import quilt3
-          b = quilt3.Bucket("s3://${bucket}")
+          import quilt3 as q3
+          b = q3.Bucket("s3://${bucket}")
           b.fetch("${path}", "./${basename(path)}")
         `,
       },
@@ -436,6 +444,7 @@ export default function File({
         </div>
 
         <div className={classes.actions}>
+          <FileProperties className={classes.fileProperties} data={versionExistsData} />
           {!!viewModes.modes.length && (
             <FileView.ViewModeSelector
               className={classes.button}
@@ -465,9 +474,13 @@ export default function File({
         Ok: requests.ObjectExistence.case({
           Exists: () => (
             <>
-              <Code>{code}</Code>
-              {!!analyticsBucket && <Analytics {...{ analyticsBucket, bucket, path }} />}
-              <Meta bucket={bucket} path={path} version={version} />
+              {preferences?.ui?.blocks?.code && <Code>{code}</Code>}
+              {!!analyticsBucket && !!preferences?.ui?.blocks?.analytics && (
+                <Analytics {...{ analyticsBucket, bucket, path }} />
+              )}
+              {preferences?.ui?.blocks?.meta && (
+                <Meta bucket={bucket} path={path} version={version} />
+              )}
               <Section icon="remove_red_eye" heading="Preview" defaultExpanded>
                 {versionExistsData.case({
                   _: () => <CenteredProgress />,

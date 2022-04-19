@@ -5,17 +5,23 @@ import * as FP from 'fp-ts'
 import * as R from 'ramda'
 import * as React from 'react'
 import * as RF from 'react-final-form'
+import * as urql from 'urql'
 import * as M from '@material-ui/core'
 
 import * as Intercom from 'components/Intercom'
 import JsonValidationErrors from 'components/JsonValidationErrors'
+import * as Model from 'model'
+import * as AWS from 'utils/AWS'
 import AsyncResult from 'utils/AsyncResult'
 import * as BucketPreferences from 'utils/BucketPreferences'
 import * as Config from 'utils/Config'
+import * as Data from 'utils/Data'
+import assertNever from 'utils/assertNever'
 import * as s3paths from 'utils/s3paths'
 import * as tagged from 'utils/taggedV2'
+import * as Types from 'utils/types'
 import * as validators from 'utils/validators'
-import type * as workflows from 'utils/workflows'
+import * as workflows from 'utils/workflows'
 
 import * as Download from '../Download'
 import * as Upload from '../Upload'
@@ -32,19 +38,12 @@ import { isS3File, S3File } from './S3FilePicker'
 import { FormSkeleton, MetaInputSkeleton } from './Skeleton'
 import SubmitSpinner from './SubmitSpinner'
 import { useUploads } from './Uploads'
+import PACKAGE_CONSTRUCT from './gql/PackageConstruct.generated'
+import { Manifest, EMPTY_MANIFEST_ENTRIES, useManifest } from './Manifest'
 
-const EMPTY_MANIFEST_ENTRIES: Record<string, FI.ExistingFile> = {}
-
-export interface Manifest {
-  entries: Record<string, FI.ExistingFile>
-  meta: {}
-  workflow?: {
-    id?: string
-  }
-}
+type PartialPackageEntry = Types.AtLeast<Model.PackageEntry, 'physicalKey'>
 
 // TODO: use tree as the main data model / source of truth?
-
 export interface LocalEntry {
   path: string
   file: FI.LocalFile
@@ -78,8 +77,7 @@ const useStyles = M.makeStyles((t) => ({
   meta: {
     display: 'flex',
     flexDirection: 'column',
-    paddingTop: ({ desktop }: { desktop: boolean }) =>
-      desktop ? t.spacing(2) : t.spacing(3),
+    paddingTop: t.spacing(3),
     overflowY: 'auto',
   },
 }))
@@ -88,8 +86,10 @@ interface PackageCreationFormProps {
   bucket: string
   close: () => void
   initial?: {
-    manifest?: Manifest
     name?: string
+    meta?: Types.JsonRecord
+    workflowId?: string
+    entries?: Model.PackageContentsFlatMap
   }
   setSubmitting: (submitting: boolean) => void
   setSuccess: (success: PackageCreationSuccess) => void
@@ -128,8 +128,8 @@ function PackageCreationForm({
   const [nameWarning, setNameWarning] = React.useState<React.ReactNode>('')
   const [metaHeight, setMetaHeight] = React.useState(0)
   const { desktop }: { desktop: boolean } = Config.use()
-  const classes = useStyles({ desktop })
-  const dialogContentClasses = PD.useContentStyles({ metaHeight, metaFullHeight: true })
+  const classes = useStyles()
+  const dialogContentClasses = PD.useContentStyles({ metaHeight })
   const validateWorkflow = PD.useWorkflowValidator(workflowsConfig)
 
   const [entriesError, setEntriesError] = React.useState<(Error | ErrorObject)[] | null>(
@@ -138,7 +138,7 @@ function PackageCreationForm({
 
   const [selectedBucket, selectBucket] = React.useState(sourceBuckets.getDefault)
 
-  const existingEntries = initial?.manifest?.entries ?? EMPTY_MANIFEST_ENTRIES
+  const existingEntries = initial?.entries ?? EMPTY_MANIFEST_ENTRIES
 
   const initialFiles: FI.FilesState = React.useMemo(
     () => ({ existing: existingEntries, added: {}, deleted: {} }),
@@ -158,24 +158,41 @@ function PackageCreationForm({
     [uploads],
   )
 
-  const createPackage = requests.useCreatePackage()
+  const [, constructPackage] = urql.useMutation(PACKAGE_CONSTRUCT)
   const validateEntries = PD.useEntriesValidator(selectedWorkflow)
 
-  const onSubmit = async ({
-    name,
-    msg,
-    files,
-    meta,
-    workflow,
-  }: {
+  const uploadPackage = Upload.useUploadPackage()
+
+  interface SubmitArgs {
     name: string
     msg: string
-    files: FI.FilesState
     meta: {}
     localFolder?: string
     workflow: workflows.Workflow
-    // eslint-disable-next-line consistent-return
-  }) => {
+  }
+  interface SubmitWebArgs extends SubmitArgs {
+    files: FI.FilesState
+  }
+  interface SubmitElectronArgs extends SubmitArgs {
+    localFolder: string
+  }
+
+  const onSubmitElectron = React.useCallback(
+    async ({ name, msg, localFolder, meta, workflow }: SubmitElectronArgs) => {
+      const payload = {
+        entry: localFolder || '',
+        message: msg,
+        meta,
+        workflow,
+      }
+      const uploadResult = await uploadPackage(payload, { name, bucket }, schema)
+      setSuccess({ name, hash: uploadResult?.hash })
+      return null
+    },
+    [bucket, schema, setSuccess, uploadPackage],
+  )
+
+  const onSubmitWeb = async ({ name, msg, files, meta, workflow }: SubmitWebArgs) => {
     const addedS3Entries: S3Entry[] = []
     const addedLocalEntries: LocalEntry[] = []
     Object.entries(files.added).forEach(([path, file]) => {
@@ -222,7 +239,7 @@ function PackageCreationForm({
       console.error('Error uploading files:')
       // eslint-disable-next-line no-console
       console.error(e)
-      return { [FF.FORM_ERROR]: PD.ERROR_MESSAGES.UPLOAD }
+      return PD.mkFormError(PD.ERROR_MESSAGES.UPLOAD)
     }
 
     const s3Entries = FP.function.pipe(
@@ -231,71 +248,79 @@ function PackageCreationForm({
         ({ path, file }) =>
           [path, { physicalKey: s3paths.handleToS3Url(file) }] as R.KeyValuePair<
             string,
-            FI.PartialExistingFile
+            PartialPackageEntry
           >,
       ),
       R.fromPairs,
     )
 
-    const contents = FP.function.pipe(
+    const allEntries = FP.function.pipe(
       files.existing,
       R.omit(Object.keys(files.deleted)),
       R.mergeLeft(uploadedEntries),
       R.mergeLeft(s3Entries),
       R.toPairs,
-      R.map(([path, data]: [string, FI.PartialExistingFile]) => ({
-        logical_key: path,
-        physical_key: data.physicalKey,
-        size: data.size,
-        hash: data.hash,
-        meta: data.meta,
+      R.map(([logicalKey, data]: [string, PartialPackageEntry]) => ({
+        logicalKey,
+        physicalKey: data.physicalKey,
+        hash: data.hash ?? null,
+        meta: data.meta ?? null,
+        size: data.size ?? null,
       })),
-      R.sortBy(R.prop('logical_key')),
+      R.sortBy(R.prop('logicalKey')),
     )
 
     try {
-      const res = await createPackage(
-        {
-          contents,
+      const res = await constructPackage({
+        params: {
+          bucket,
+          name,
           message: msg,
-          meta,
-          target: {
-            name,
-            bucket,
-          },
-          workflow,
+          userMeta: requests.getMetaValue(meta, schema) ?? null,
+          workflow:
+            // eslint-disable-next-line no-nested-ternary
+            workflow.slug === workflows.notAvailable
+              ? null
+              : workflow.slug === workflows.notSelected
+              ? ''
+              : workflow.slug,
         },
-        schema,
-      )
-      setSuccess({ name, hash: res.top_hash })
-    } catch (e) {
+        src: {
+          entries: allEntries,
+        },
+      })
+      if (res.error) throw res.error
+      if (!res.data) throw new Error('No data returned by the API')
+      const r = res.data.packageConstruct
+      switch (r.__typename) {
+        case 'PackagePushSuccess':
+          setSuccess({ name, hash: r.revision.hash })
+          return
+        case 'OperationError':
+          return PD.mkFormError(r.message)
+        case 'InvalidInput':
+          return PD.mapInputErrors(r.errors, { 'src.entries': 'files' })
+        default:
+          assertNever(r)
+      }
+    } catch (e: any) {
       // eslint-disable-next-line no-console
-      console.log('error creating manifest', e)
-      // TODO: handle specific cases?
-      const errorMessage = e instanceof Error ? (e as Error).message : null
-      return { [FF.FORM_ERROR]: errorMessage || PD.ERROR_MESSAGES.MANIFEST }
+      console.error('Error creating manifest:')
+      // eslint-disable-next-line no-console
+      console.error(e)
+      return PD.mkFormError(
+        e.message ? `Unexpected error: ${e.message}` : PD.ERROR_MESSAGES.MANIFEST,
+      )
     }
   }
 
-  const uploadPackage = Upload.useUploadPackage()
-
-  const onSubmitWrapped = async (...args: Parameters<typeof onSubmit>) => {
+  const onSubmitWrapped = async (args: SubmitWebArgs | SubmitElectronArgs) => {
     setSubmitting(true)
     try {
       if (desktop) {
-        const { name, msg, localFolder, meta, workflow } = args[0]
-        const payload = {
-          entry: localFolder || '',
-          message: msg,
-          meta,
-          workflow,
-        }
-        const uploadResult = await uploadPackage(payload, { name, bucket }, schema)
-        setSuccess({ name, hash: uploadResult?.hash })
-        return null
-      } else {
-        return await onSubmit(...args)
+        return await onSubmitElectron(args as SubmitElectronArgs)
       }
+      return await onSubmitWeb(args as SubmitWebArgs)
     } finally {
       setSubmitting(false)
     }
@@ -356,6 +381,7 @@ function PackageCreationForm({
   // HACK: FIXME: it triggers name validation with correct workflow
   const [hideMeta, setHideMeta] = React.useState(false)
 
+  // TODO: move useLocalFolder to its own component shared by Download and Upload
   const [defaultLocalFolder] = Download.useLocalFolder()
 
   return (
@@ -445,39 +471,9 @@ function PackageCreationForm({
                     }}
                   />
 
-                  {desktop && (
-                    <RF.Field
-                      name="localFolder"
-                      component={Upload.LocalFolderInput}
-                      initialValue={defaultLocalFolder}
-                    />
-                  )}
-
-                  {!desktop &&
-                    (schemaLoading || hideMeta ? (
-                      <MetaInputSkeleton
-                        className={classes.meta}
-                        ref={setEditorElement}
-                      />
-                    ) : (
-                      <RF.Field
-                        className={classes.meta}
-                        component={MI.MetaInput}
-                        name="meta"
-                        bucket={bucket}
-                        schema={schema}
-                        schemaError={responseError}
-                        validate={validateMetaInput}
-                        validateFields={['meta']}
-                        isEqual={R.equals}
-                        initialValue={initial?.manifest?.meta || MI.EMPTY_META_VALUE}
-                        ref={setEditorElement}
-                      />
-                    ))}
-                </Layout.LeftColumn>
-
-                <Layout.RightColumn>
-                  {desktop ? (
+                  {schemaLoading || hideMeta ? (
+                    <MetaInputSkeleton className={classes.meta} ref={setEditorElement} />
+                  ) : (
                     <RF.Field
                       className={classes.meta}
                       component={MI.MetaInput}
@@ -488,8 +484,26 @@ function PackageCreationForm({
                       validate={validateMetaInput}
                       validateFields={['meta']}
                       isEqual={R.equals}
-                      initialValue={initial?.manifest?.meta || MI.EMPTY_META_VALUE}
+                      initialValue={initial?.meta || MI.EMPTY_META_VALUE}
                       ref={setEditorElement}
+                    />
+                  )}
+                </Layout.LeftColumn>
+
+                <Layout.RightColumn>
+                  {desktop ? (
+                    <RF.Field
+                      className={cx(classes.files, {
+                        [classes.filesWithError]: !!entriesError,
+                      })}
+                      component={Upload.LocalFolderInput}
+                      initialValue={defaultLocalFolder}
+                      name="localFolder"
+                      title="Local directory"
+                      errors={{
+                        required: 'Add directory to create a package',
+                      }}
+                      validate={validators.required as FF.FieldValidator<string>}
                     />
                   ) : (
                     <RF.Field
@@ -499,7 +513,6 @@ function PackageCreationForm({
                       // @ts-expect-error
                       component={FI.FilesInput}
                       name="files"
-                      unwrapped
                       validate={validateFiles as FF.FieldValidator<$TSFixMe>}
                       validateFields={['files']}
                       errors={{
@@ -568,7 +581,7 @@ function PackageCreationForm({
   )
 }
 
-const PackageCreationDialogState = tagged.create(
+const DialogState = tagged.create(
   'app/containers/Bucket/PackageDialog/PackageCreationForm:DialogState' as const,
   {
     Closed: () => {},
@@ -584,39 +597,34 @@ const PackageCreationDialogState = tagged.create(
 )
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
-type PackageCreationDialogState = tagged.InstanceOf<typeof PackageCreationDialogState>
+type DialogState = tagged.InstanceOf<typeof DialogState>
+
+const EMPTY_MANIFEST_RESULT = AsyncResult.Ok()
+
+interface PackageCreationDialogUIOptions {
+  resetFiles?: React.ReactNode
+  submit?: React.ReactNode
+  successBrowse?: React.ReactNode
+  successRenderMessage?: (props: DialogSuccessRenderMessageProps) => React.ReactNode
+  successTitle?: React.ReactNode
+  title?: React.ReactNode
+}
 
 interface UsePackageCreationDialogProps {
   bucket: string
-  data?: $TSFixMe // AsyncResult<{ manifest, workflowsConfig, sourceBuckets }>
+  src?: {
+    name: string
+    hash?: string
+  }
   delayHashing?: boolean
   disableStateDisplay?: boolean
-  fetch?: () => void
-  name?: string
-  onExited: (result: {
-    pushed: PackageCreationSuccess | false
-  }) => boolean | undefined | void
-  refresh?: () => void
-  ui?: {
-    resetFiles?: React.ReactNode
-    submit?: React.ReactNode
-    successBrowse?: React.ReactNode
-    successRenderMessage?: (props: DialogSuccessRenderMessageProps) => React.ReactNode
-    successTitle?: React.ReactNode
-    title?: React.ReactNode
-  }
 }
 
 export function usePackageCreationDialog({
   bucket,
-  data,
+  src,
   delayHashing = false,
   disableStateDisplay = false,
-  fetch,
-  name,
-  onExited,
-  refresh,
-  ui = {},
 }: UsePackageCreationDialogProps) {
   const [isOpen, setOpen] = React.useState(false)
   const [exited, setExited] = React.useState(!isOpen)
@@ -624,11 +632,49 @@ export function usePackageCreationDialog({
   const [submitting, setSubmitting] = React.useState(false)
   const [workflow, setWorkflow] = React.useState<workflows.Workflow>()
 
+  const s3 = AWS.S3.use()
+  const workflowsData = Data.use(requests.workflowsConfig, { s3, bucket })
+  // XXX: use AsyncResult
+  const preferences = BucketPreferences.use()
+
+  const manifestData = useManifest({
+    bucket,
+    // this only gets passed when src is defined, so it should be always non-null when the query gets executed
+    name: src?.name!,
+    hash: src?.hash,
+    pause: !(src && isOpen),
+  })
+
+  const manifestResult = src ? manifestData.result : EMPTY_MANIFEST_RESULT
+
+  // AsyncResult<Model.PackageContentsFlatMap | undefined>
+  const data = React.useMemo(
+    () =>
+      workflowsData.case({
+        Ok: (workflowsConfig: workflows.WorkflowsConfig) =>
+          AsyncResult.case(
+            {
+              Ok: (manifest: Manifest | undefined) =>
+                preferences
+                  ? AsyncResult.Ok({
+                      manifest,
+                      workflowsConfig,
+                      sourceBuckets: preferences.ui.sourceBuckets,
+                    })
+                  : AsyncResult.Pending(),
+              _: R.identity,
+            },
+            manifestResult,
+          ),
+        _: R.identity,
+      }),
+    [workflowsData, manifestResult, preferences],
+  )
+
   const open = React.useCallback(() => {
     setOpen(true)
-    fetch?.()
     setExited(false)
-  }, [setOpen, fetch, setExited])
+  }, [setOpen, setExited])
 
   const close = React.useCallback(() => {
     if (submitting) return
@@ -639,28 +685,24 @@ export function usePackageCreationDialog({
   const handleExited = React.useCallback(() => {
     setExited(true)
     setSuccess(false)
-    if (onExited) {
-      const shouldRefresh = onExited({ pushed: success })
-      if (shouldRefresh) refresh?.()
-    }
-  }, [setExited, setSuccess, success, onExited, refresh])
+  }, [setExited, setSuccess])
 
   Intercom.usePauseVisibilityWhen(isOpen)
 
-  const state = React.useMemo<PackageCreationDialogState>(() => {
-    if (exited) return PackageCreationDialogState.Closed()
-    if (success) return PackageCreationDialogState.Success(success)
+  const state = React.useMemo<DialogState>(() => {
+    if (exited) return DialogState.Closed()
+    if (success) return DialogState.Success(success)
     return AsyncResult.case(
       {
-        Ok: PackageCreationDialogState.Form,
-        Err: PackageCreationDialogState.Error,
-        _: PackageCreationDialogState.Loading,
+        Ok: DialogState.Form,
+        Err: DialogState.Error,
+        _: DialogState.Loading,
       },
       data,
     )
   }, [exited, success, data])
 
-  const element = (
+  const render = (ui: PackageCreationDialogUIOptions = {}) => (
     <PD.DialogWrapper
       exited={exited}
       fullWidth
@@ -670,7 +712,7 @@ export function usePackageCreationDialog({
       open={isOpen}
       scroll="body"
     >
-      {PackageCreationDialogState.match(
+      {DialogState.match(
         {
           Closed: () => null,
           Loading: () => (
@@ -692,7 +734,7 @@ export function usePackageCreationDialog({
           ),
           Form: ({ manifest, workflowsConfig, sourceBuckets }) => (
             <PD.SchemaFetcher
-              manifest={manifest}
+              initialWorkflowId={manifest?.workflowId}
               workflowsConfig={workflowsConfig}
               workflow={workflow}
             >
@@ -707,7 +749,7 @@ export function usePackageCreationDialog({
                     setWorkflow,
                     workflowsConfig,
                     sourceBuckets,
-                    initial: { manifest, name },
+                    initial: { name: src?.name, ...manifest },
                     delayHashing,
                     disableStateDisplay,
                     ui: {
@@ -736,5 +778,5 @@ export function usePackageCreationDialog({
     </PD.DialogWrapper>
   )
 
-  return { open, close, element }
+  return { open, close, render }
 }

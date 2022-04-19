@@ -26,6 +26,7 @@ import * as s3paths from 'utils/s3paths'
 import { readableBytes, readableQuantity } from 'utils/string'
 
 import Code from 'containers/Bucket/Code'
+import FileProperties from 'containers/Bucket/FileProperties'
 import * as FileView from 'containers/Bucket/FileView'
 import Section from 'containers/Bucket/Section'
 import renderPreview from 'containers/Bucket/renderPreview'
@@ -336,13 +337,13 @@ const useStyles = M.makeStyles((t) => ({
   at: {
     color: t.palette.text.secondary,
   },
-  spacer: {
-    flexGrow: 1,
+  actions: {
+    alignItems: 'center',
+    display: 'flex',
+    marginLeft: 'auto',
   },
   button: {
-    flexShrink: 0,
-    marginBottom: -3,
-    marginTop: -3,
+    marginLeft: t.spacing(2),
   },
 }))
 
@@ -369,8 +370,8 @@ export default function File({
         label: 'Python',
         hl: 'python',
         contents: dedent`
-          import quilt3
-          b = quilt3.Bucket("s3://${bucket}")
+          import quilt3 as q3
+          b = q3.Bucket("s3://${bucket}")
           b.fetch("${path}", "./${basename(path)}")
         `,
       },
@@ -449,8 +450,12 @@ export default function File({
             'latest'
           )}
         </div>
-        <div className={classes.spacer} />
-        {downloadable && <FileView.DownloadButton handle={handle} />}
+        <div className={classes.actions}>
+          <FileProperties data={versionExistsData} />
+          {downloadable && (
+            <FileView.DownloadButton className={classes.button} handle={handle} />
+          )}
+        </div>
       </div>
       {objExistsData.case({
         _: () => <CenteredProgress />,

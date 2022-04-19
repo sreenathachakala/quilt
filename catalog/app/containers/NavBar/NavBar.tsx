@@ -6,6 +6,7 @@ import { createStructuredSelector } from 'reselect'
 import { sanitizeUrl } from '@braintree/sanitize-url'
 import * as M from '@material-ui/core'
 
+import * as Intercom from 'components/Intercom'
 import Logo from 'components/Logo'
 import * as style from 'constants/style'
 import * as URLS from 'constants/urls'
@@ -28,13 +29,38 @@ const useLogoLinkStyles = M.makeStyles((t) => ({
 }))
 
 function LogoLink() {
-  const classes = useLogoLinkStyles()
+  const settings = CatalogSettings.use()
+  const t = M.useTheme()
+  const xs = M.useMediaQuery(t.breakpoints.down('xs'))
   const cfg = Config.useConfig()
+  const wide = cfg.mode === 'MARKETING' && xs
+  const classes = useLogoLinkStyles()
   const { urls } = NamedRoutes.use()
   return (
     <Link className={classes.root} to={urls.home()}>
-      <Logo responsive forcedShort={cfg.mode === 'OPEN' || cfg.mode === 'PRODUCT'} />
+      <Logo
+        width={wide ? '76.5px' : '27px'}
+        height={wide ? '29px' : '27px'}
+        src={settings?.logo?.url}
+      />
     </Link>
+  )
+}
+
+interface QuiltLinkProps {
+  className?: string
+}
+
+function QuiltLink({ className }: QuiltLinkProps) {
+  return (
+    <a
+      className={className}
+      href={URLS.homeMarketing}
+      target="_blank"
+      title="Where data comes together"
+    >
+      <Logo width="27px" height="27px" />
+    </a>
   )
 }
 
@@ -113,6 +139,7 @@ function UserDropdown() {
       <M.Button variant="text" color="inherit" onClick={open}>
         {userDisplay(user)} <M.Icon>expand_more</M.Icon>
       </M.Button>
+
       <M.MuiThemeProvider theme={style.appTheme}>
         <M.Menu anchorEl={anchor} open={!!anchor} onClose={close}>
           {user.isAdmin && (
@@ -292,10 +319,32 @@ function SignIn({ error, waiting }: SignInProps) {
   )
 }
 
-const AppBar = M.styled(M.AppBar)(({ theme: t }) => ({
-  background: `left / 64px url(${bg})`,
-  zIndex: t.zIndex.appBar + 1,
+const useAppBarStyles = M.makeStyles((t) => ({
+  root: {
+    background: ({ backgroundColor }: { backgroundColor?: string }) =>
+      backgroundColor || `left / 64px url(${bg})`,
+    zIndex: t.zIndex.appBar + 1,
+  },
 }))
+
+interface AppBarProps {
+  children: React.ReactNode
+}
+
+const AppBar = React.forwardRef<HTMLDivElement, AppBarProps>(function AppBar(
+  { children },
+  ref,
+) {
+  const settings = CatalogSettings.use()
+  const classes = useAppBarStyles({
+    backgroundColor: settings?.theme?.palette?.primary?.main,
+  })
+  return (
+    <M.AppBar className={classes.root} ref={ref}>
+      {children}
+    </M.AppBar>
+  )
+})
 
 interface ContainerProps {
   children?: React.ReactNode
@@ -337,7 +386,6 @@ const NavLink = React.forwardRef((props: NavLinkProps, ref: React.Ref<unknown>) 
   return (
     <M.Box
       component={props.to ? HashLink : 'a'}
-      mr={2}
       color={isActive ? 'text.disabled' : 'text.secondary'}
       fontSize="body2.fontSize"
       maxWidth={64}
@@ -359,21 +407,30 @@ interface LinkDescriptor {
   label: string
   to?: string
   href?: string
+  target?: '_blank'
 }
 
 function useLinks(): LinkDescriptor[] {
   const { paths, urls } = NamedRoutes.use()
   const cfg = Config.useConfig()
   const settings = CatalogSettings.use()
+  const customNavLink: LinkDescriptor | null = React.useMemo(() => {
+    if (!settings?.customNavLink) return null
+    const href = sanitizeUrl(settings.customNavLink.url)
+    if (href === 'about:blank') return null
+    return {
+      href,
+      label: settings.customNavLink.label,
+      target: '_blank',
+    }
+  }, [settings?.customNavLink])
+
   return [
     process.env.NODE_ENV === 'development' && {
       to: urls.example(),
       label: 'Example',
     },
-    settings?.customNavLink && {
-      href: sanitizeUrl(settings.customNavLink.url),
-      label: settings.customNavLink.label,
-    },
+    customNavLink,
     cfg.mode !== 'MARKETING' && {
       to: urls.uriResolver(),
       label: 'URI',
@@ -385,7 +442,7 @@ function useLinks(): LinkDescriptor[] {
       href: URLS.jobs,
       label: 'Jobs',
     },
-    { href: URLS.blog, label: 'Blog' },
+    cfg.mode !== 'PRODUCT' && { href: URLS.blog, label: 'Blog' },
     cfg.mode === 'MARKETING' && { to: urls.about(), label: 'About' },
   ].filter(Boolean) as LinkDescriptor[]
 }
@@ -394,8 +451,29 @@ const selector = createStructuredSelector(
   R.pick(['error', 'waiting', 'authenticated'], authSelectors),
 )
 
+const useNavBarStyles = M.makeStyles((t) => ({
+  nav: {
+    alignItems: 'center',
+    display: 'flex',
+    marginLeft: t.spacing(3),
+    marginRight: t.spacing(2),
+  },
+  navItem: {
+    '& + &': {
+      marginLeft: t.spacing(2),
+    },
+  },
+  quiltLogo: {
+    margin: '0 0 3px 8px',
+  },
+  spacer: {
+    flexGrow: 1,
+  },
+}))
+
 export function NavBar() {
   const cfg = Config.use()
+  const settings = CatalogSettings.use()
   const bucket = BucketConfig.useCurrentBucket()
   const { paths } = NamedRoutes.use()
   const isSignIn = !!useRoute(paths.signIn, { exact: true }).match
@@ -403,21 +481,33 @@ export function NavBar() {
   const t = M.useTheme()
   const useHamburger = M.useMediaQuery(t.breakpoints.down('sm'))
   const links = useLinks()
+  const intercom = Intercom.use()
+  const classes = useNavBarStyles()
   return (
     <Container>
       {cfg.disableNavigator || (cfg.alwaysRequiresAuth && isSignIn) ? (
-        <M.Box flexGrow={1} />
+        <div className={classes.spacer} />
       ) : (
         <Controls {...{ bucket, disableSearch: cfg.mode === 'LOCAL' }} />
       )}
+
       {!useHamburger && (
-        <M.Box component="nav" display="flex" alignItems="center" ml={3}>
+        <nav className={classes.nav}>
           {links.map(({ label, ...rest }) => (
-            <NavLink key={`${label}:${rest.to || rest.href}`} {...rest}>
+            <NavLink
+              key={`${label}:${rest.to || rest.href}`}
+              className={classes.navItem}
+              {...rest}
+            >
               {label}
             </NavLink>
           ))}
-        </M.Box>
+          {!intercom.dummy && intercom.isCustom && (
+            <M.MuiThemeProvider theme={style.appTheme}>
+              <Intercom.Launcher className={classes.navItem} />
+            </M.MuiThemeProvider>
+          )}
+        </nav>
       )}
 
       {!cfg.disableNavigator &&
@@ -435,6 +525,8 @@ export function NavBar() {
         ) : (
           <AuthHamburger {...{ authenticated, error, waiting }} />
         ))}
+
+      {settings?.logo?.url && <QuiltLink className={classes.quiltLogo} />}
     </Container>
   )
 }
