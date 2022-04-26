@@ -686,6 +686,19 @@ class S3HashingTest(QuiltTestCase):
     key = 'test-key'
     src = PhysicalKey(bucket, key, None)
 
+    def test_adjust_chunksize(self):
+        default = 8 * 1024 * 1024
+
+        # "Normal" file sizes
+        assert data_transfer.adjust_checksum_chunksize(8 * 1024 * 1024) == default
+        assert data_transfer.adjust_checksum_chunksize(1024 * 1024 * 1024) == default
+        assert data_transfer.adjust_checksum_chunksize(10_000 * default) == default
+
+        # Big file: exceeds 10,000 parts
+        assert data_transfer.adjust_checksum_chunksize(10_000 * default + 1) == default * 2
+        assert data_transfer.adjust_checksum_chunksize(2 * 10_000 * default + 1) == default * 4
+
+
     def test_single(self):
         data = b'0123456789abcdef'
         size = len(data)
@@ -705,11 +718,10 @@ class S3HashingTest(QuiltTestCase):
             assert '-' not in hash1
 
     def test_multipart(self):
-        # Minimum part size is 5MB.
-        data = b'1234567890abc' * 1024 * 1024
+        data = b'1234567890abcdefgh' * 1024 * 1024
         size = len(data)
 
-        chunksize = 5 * 1024 * 1024
+        chunksize = 8 * 1024 * 1024
 
         ranges = {
             f'bytes=0-{chunksize-1}': data[:chunksize],
@@ -727,10 +739,10 @@ class S3HashingTest(QuiltTestCase):
 
     def test_one_part(self):
         # Edge case: file length is exactly the threshold, resulting in a 1-part multipart upload.
-        data = b'123456' * 1024 * 1024
+        data = b'12345678' * 1024 * 1024
         size = len(data)
 
-        chunksize = 6 * 1024 * 1024
+        chunksize = 8 * 1024 * 1024
 
         ranges = {
             f'bytes=0-{size-1}': data,

@@ -228,6 +228,34 @@ def read_file_chunks(file, chunksize=s3_transfer_config.io_chunksize):
 UPLOAD_ETAG_OPTIMIZATION_THRESHOLD = 1024
 
 
+# 8MB - same as TransferConfig().multipart_threshold - but hard-coded to guarantee it won't change.
+CHECKSUM_MULTIPART_THRESHOLD = 8 * 1024 * 1024
+
+# Maximum number of parts supported by S3
+CHECKSUM_MAX_PARTS = 10_000
+
+
+def adjust_checksum_chunksize(file_size):
+    """
+    Calculate the chunk size to be used for the checksum. It is normally 8MB,
+    but gets doubled as long as the number of parts exceeds the maximum of 10,000.
+
+    It is the same as
+    `ChunksizeAdjuster().adjust_chunksize(s3_transfer_config.multipart_chunksize, file_size)`,
+    but hard-coded to guarantee it won't change and make the current behavior a part of the API.
+    """
+    assert file_size >= CHECKSUM_MULTIPART_THRESHOLD, "file_size too small for multi-part"
+
+    chunksize = 8 * 1024 * 1024
+    num_parts = int(math.ceil(file_size / float(chunksize)))
+
+    while num_parts > CHECKSUM_MAX_PARTS:
+        chunksize *= 2
+        num_parts = int(math.ceil(file_size / float(chunksize)))
+
+    return chunksize
+
+
 def _copy_local_file(ctx, size, src_path, dest_path):
     pathlib.Path(dest_path).parent.mkdir(parents=True, exist_ok=True)
 
@@ -242,7 +270,7 @@ def _copy_local_file(ctx, size, src_path, dest_path):
 def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
     s3_client = ctx.s3_client_provider.standard_client
 
-    if size < s3_transfer_config.multipart_threshold:
+    if size < CHECKSUM_MULTIPART_THRESHOLD:
         with ReadFileChunk.from_filename(src_path, 0, size, [ctx.progress]) as fd:
             resp = s3_client.put_object(
                 Body=fd,
@@ -262,8 +290,7 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
         )
         upload_id = resp['UploadId']
 
-        adjuster = ChunksizeAdjuster()
-        chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
+        chunksize = adjust_checksum_chunksize(size)
 
         chunk_offsets = list(range(0, size, chunksize))
 
@@ -334,6 +361,8 @@ def _download_file(ctx, size, src_bucket, src_key, src_version, dest_path):
     if src_version is not None:
         params.update(VersionId=src_version)
 
+    # Note: we are not calculating checksums when downloading,
+    # so we're free to use S3 defaults (or anything else) here.
     part_size = s3_transfer_config.multipart_chunksize
     is_multi_part = (
         is_regular_file
@@ -391,7 +420,7 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
 
     s3_client = ctx.s3_client_provider.standard_client
 
-    if size < s3_transfer_config.multipart_threshold:
+    if size < CHECKSUM_MULTIPART_THRESHOLD:
         params = dict(
             CopySource=src_params,
             Bucket=dest_bucket,
@@ -415,8 +444,7 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
         )
         upload_id = resp['UploadId']
 
-        adjuster = ChunksizeAdjuster()
-        chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
+        chunksize = adjust_checksum_chunksize(size)
 
         chunk_offsets = list(range(0, size, chunksize))
 
@@ -967,12 +995,11 @@ def _calculate_sha256_internal(src_list, sizes, results):
         for src, size, result in zip(src_list, sizes, results):
             if result is not None and not isinstance(result, Exception):
                 futures.append((False, []))
-            elif size < s3_transfer_config.multipart_threshold:
+            elif size < CHECKSUM_MULTIPART_THRESHOLD:
                 future = executor.submit(_process_url_part, src, 0, size)
                 futures.append((False, [future]))
             else:
-                adjuster = ChunksizeAdjuster()
-                chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
+                chunksize = adjust_checksum_chunksize(size)
 
                 src_future_list = []
                 for start in range(0, size, chunksize):
@@ -1006,11 +1033,10 @@ def _calculate_sha256_internal(src_list, sizes, results):
 
 def calculate_sha256_bytes(data: bytes):
     size = len(data)
-    if size < s3_transfer_config.multipart_threshold:
+    if size < CHECKSUM_MULTIPART_THRESHOLD:
         result = base64.b64encode(hashlib.sha256(data).digest()).decode()
     else:
-        adjuster = ChunksizeAdjuster()
-        chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
+        chunksize = adjust_checksum_chunksize(size)
 
         hashes = []
         for start in range(0, size, chunksize):
