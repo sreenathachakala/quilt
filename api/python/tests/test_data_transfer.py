@@ -698,7 +698,6 @@ class S3HashingTest(QuiltTestCase):
         assert data_transfer.adjust_checksum_chunksize(10_000 * default + 1) == default * 2
         assert data_transfer.adjust_checksum_chunksize(2 * 10_000 * default + 1) == default * 4
 
-
     def test_single(self):
         data = b'0123456789abcdef'
         size = len(data)
