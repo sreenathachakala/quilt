@@ -4,7 +4,7 @@ import * as AWS from 'utils/AWS'
 
 export * as EVENTS from './events'
 
-interface Credentials {
+export interface Credentials {
   accessKeyId: string
   secretAccessKey: string
   sessionToken: string

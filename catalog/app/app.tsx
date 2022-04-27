@@ -43,6 +43,7 @@ import '!file-loader?name=[name].[ext]!./favicon.ico'
 import '!file-loader?name=[name].[ext]!./quilt-og.png'
 // Import CSS reset and Global Styles
 import WithGlobalStyles from './global-styles'
+import DevTools from 'containers/DevTools'
 
 // listen for Roboto fonts
 fontLoader('Roboto', 'Roboto Mono').then(() => {
@@ -169,6 +170,7 @@ const render = () => {
       Notifications.WithNotifications,
       ErrorBoundary,
       BucketCacheProvider,
+      DevTools,
       App,
     ),
     MOUNT_NODE,
