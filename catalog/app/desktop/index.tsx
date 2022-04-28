@@ -34,6 +34,7 @@ import * as Cache from 'utils/ResourceCache'
 import * as Sentry from 'utils/Sentry'
 import * as Store from 'utils/Store'
 import * as IPC from 'utils/electron/ipc'
+import SyncCredentials from 'utils/electron/credentials'
 import { Provider as IPCProvider } from 'utils/electron/ipc-provider'
 import fontLoader from 'utils/fontLoader'
 import RouterProvider, { LOCATION_CHANGE, selectLocation } from 'utils/router'
@@ -195,17 +196,19 @@ const Root = () => {
                                             <AWS.Credentials.Provider>
                                               <AWS.Config.Provider>
                                                 <IPCProvider value={IPC}>
-                                                  <AWS.Athena.Provider>
-                                                    <AWS.S3.Provider>
-                                                      <Notifications.WithNotifications>
-                                                        <ErrorBoundary>
-                                                          <BucketCacheProvider>
-                                                            <DesktopApp />
-                                                          </BucketCacheProvider>
-                                                        </ErrorBoundary>
-                                                      </Notifications.WithNotifications>
-                                                    </AWS.S3.Provider>
-                                                  </AWS.Athena.Provider>
+                                                  <SyncCredentials>
+                                                    <AWS.Athena.Provider>
+                                                      <AWS.S3.Provider>
+                                                        <Notifications.WithNotifications>
+                                                          <ErrorBoundary>
+                                                            <BucketCacheProvider>
+                                                              <DesktopApp />
+                                                            </BucketCacheProvider>
+                                                          </ErrorBoundary>
+                                                        </Notifications.WithNotifications>
+                                                      </AWS.S3.Provider>
+                                                    </AWS.Athena.Provider>
+                                                  </SyncCredentials>
                                                 </IPCProvider>
                                               </AWS.Config.Provider>
                                             </AWS.Credentials.Provider>

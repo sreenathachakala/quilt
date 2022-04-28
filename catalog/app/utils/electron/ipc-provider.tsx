@@ -51,6 +51,7 @@ export const Provider = function IpcProvider({
       off,
       on,
       invoke: (channel: string, ...args: any[]) =>
+        // FIXME: remove credentials
         invoke(channel, serializeCredentials(credentials), ...args),
       send,
     }),
