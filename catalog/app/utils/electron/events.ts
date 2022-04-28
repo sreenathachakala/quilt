@@ -11,3 +11,8 @@ export const OPEN_IN_EXPLORER = 'open_in_explorer'
 export const QUIT = 'quit'
 export const READY = 'ready'
 export const UPLOAD_PACKAGE = 'upload_package'
+
+export const SYNC_FOLDERS_ADD = 'sync_folders_add'
+export const SYNC_FOLDERS_EDIT = 'sync_folders_edit'
+export const SYNC_FOLDERS_LIST = 'sync_folders_list'
+export const SYNC_FOLDERS_REMOVE = 'sync_folders_remove'
