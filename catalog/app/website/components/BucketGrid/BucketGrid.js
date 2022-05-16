@@ -101,14 +101,16 @@ const useBucketStyles = M.makeStyles((t) => ({
 function Bucket({ bucket, onTagClick, tagIsMatching }) {
   const classes = useBucketStyles()
   const { urls } = NamedRoutes.use()
-  const cfg = Config.useConfig()
+  const cfg = Config.use()
 
   return (
     <div className={classes.bucket}>
       <div>
-        <div className={classes.shared}>
-          <Collaborators bucket={bucket.name} collaborators={bucket.collaborators} />
-        </div>
+        {cfg.mode === 'PRODUCT' && (
+          <div className={classes.shared}>
+            <Collaborators bucket={bucket.name} collaborators={bucket.collaborators} />
+          </div>
+        )}
         <Link className={classes.title} to={urls.bucketRoot(bucket.name)}>
           {bucket.title}
         </Link>
