@@ -1,9 +1,10 @@
+import { basename } from 'path'
+
 import * as React from 'react'
 import { DropEvent, useDropzone } from 'react-dropzone'
 import type * as RF from 'react-final-form'
 
 import { JsonValue } from 'components/JsonEditor/constants'
-import { basename } from 'path'
 
 import useDragging from 'utils/dragging'
 import * as IPC from 'utils/electron/ipc-provider'
