@@ -24,6 +24,9 @@ export default function RevisionMenu({ className, onDelete }: RevisionMenuProps)
     onDelete()
     setAnchorEl(null)
   }, [onDelete, setAnchorEl])
+  const handleDesktopClick = React.useCallback(() => {
+    window.location.assign('quilt://start-something')
+  }, [])
 
   return (
     <>
@@ -33,6 +36,9 @@ export default function RevisionMenu({ className, onDelete }: RevisionMenuProps)
 
       <M.Menu anchorEl={anchorEl} open={!!anchorEl} onClose={handleClose}>
         <M.MenuItem onClick={handleDeleteClick}>Delete revision</M.MenuItem>
+        <M.MenuItem>
+          <a href="quilt://start-something">Open in Desktop</a>
+        </M.MenuItem>
       </M.Menu>
     </>
   )
