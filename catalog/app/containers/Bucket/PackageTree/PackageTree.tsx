@@ -231,7 +231,7 @@ function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayP
     } else if (hashOrTag) {
       window.location.assign(`${baseUrl}:${hashOrTag}`)
     }
-  }, [])
+  }, [bucket, name, hash, hashOrTag])
 
   const onPackageDeleteDialogClose = React.useCallback(() => {
     setDeletionState(

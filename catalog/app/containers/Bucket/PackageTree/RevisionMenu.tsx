@@ -32,7 +32,7 @@ export default function RevisionMenu({
   const handleDesktopClick = React.useCallback(() => {
     onDesktop()
     setAnchorEl(null)
-  }, [setAnchorEl])
+  }, [onDesktop, setAnchorEl])
 
   return (
     <>

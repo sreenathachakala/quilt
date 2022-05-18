@@ -31,10 +31,6 @@ export default function Lock() {
   const handleLock = React.useCallback((event, lock) => setOpen(lock), [])
 
   React.useEffect(() => {
-    ipc.on('log', (event, ...args) => console.log(...args))
-    ipc.on('info', (event, ...args) => console.info(...args))
-    ipc.on('error', (event, ...args) => console.error(...args))
-
     ipc.on(IPC.EVENTS.LOCK, handleLock)
     return () => ipc.off(IPC.EVENTS.LOCK, handleLock)
   }, [ipc, handleLock])
