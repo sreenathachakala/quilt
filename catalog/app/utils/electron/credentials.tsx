@@ -25,6 +25,9 @@ export default function SyncCredentials({ children }: SyncCredentialsProvider) {
   const sendCredentials = React.useCallback(() => {
     ipc.send(IPC.EVENTS.CREDENTIALS, serializeCredentials(credentials))
   }, [credentials, ipc])
-  React.useEffect(sendCredentials)
+  React.useEffect(() => {
+    const timer = setInterval(sendCredentials, 5000)
+    return () => clearInterval(timer)
+  }, [sendCredentials])
   return <>{children}</>
 }
