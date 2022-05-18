@@ -12,6 +12,7 @@ import * as RT from 'utils/reactTools'
 import { useLocation } from 'utils/router'
 
 import * as CliReadiness from './CliReadiness'
+import Lock from './Lock'
 
 const redirectTo =
   (path: string) =>
@@ -52,6 +53,7 @@ export default function App() {
 
   return (
     <CatchNotFound id={`${l.pathname}${l.search}${l.hash}`}>
+      <Lock />
       <Switch>
         <Route path={paths.home} component={protect(Landing)} exact />
 
