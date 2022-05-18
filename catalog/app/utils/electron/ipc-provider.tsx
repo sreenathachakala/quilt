@@ -1,14 +1,6 @@
 import * as React from 'react'
 
-import * as AWS from 'utils/AWS'
-
 export * as EVENTS from './events'
-
-interface Credentials {
-  accessKeyId: string
-  secretAccessKey: string
-  sessionToken: string
-}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const handler = (eventName: string, callback: (event: any, ...args: any[]) => void) => {}
@@ -35,29 +27,8 @@ interface SentryProviderProps {
   value: IPC
 }
 
-const serializeCredentials = (credentials: Credentials) => ({
-  accessKeyId: credentials.accessKeyId,
-  secretAccessKey: credentials.secretAccessKey,
-  sessionToken: credentials.sessionToken,
-})
-
-export const Provider = function IpcProvider({
-  children,
-  value: { off, on, invoke, send },
-}: SentryProviderProps) {
-  const credentials: Credentials = AWS.Credentials.use()
-  const ipc = React.useMemo(
-    () => ({
-      off,
-      on,
-      invoke: (channel: string, ...args: any[]) =>
-        // FIXME: remove credentials
-        invoke(channel, serializeCredentials(credentials), ...args),
-      send,
-    }),
-    [credentials, on, off, send, invoke],
-  )
-  return <Ctx.Provider value={ipc}>{children}</Ctx.Provider>
+export const Provider = function IpcProvider({ children, value }: SentryProviderProps) {
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
 function useIPC(): IPC {
