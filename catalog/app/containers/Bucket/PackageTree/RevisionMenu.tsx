@@ -4,9 +4,14 @@ import * as M from '@material-ui/core'
 interface RevisionMenuProps {
   className: string
   onDelete: () => void
+  onDesktop: () => void
 }
 
-export default function RevisionMenu({ className, onDelete }: RevisionMenuProps) {
+export default function RevisionMenu({
+  className,
+  onDelete,
+  onDesktop,
+}: RevisionMenuProps) {
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null)
 
   const handleOpen = React.useCallback(
@@ -25,7 +30,7 @@ export default function RevisionMenu({ className, onDelete }: RevisionMenuProps)
     setAnchorEl(null)
   }, [onDelete, setAnchorEl])
   const handleDesktopClick = React.useCallback(() => {
-    window.location.assign('quilt://start-something')
+    onDesktop()
     setAnchorEl(null)
   }, [setAnchorEl])
 

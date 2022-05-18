@@ -224,6 +224,15 @@ function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayP
     setDeletionState(R.assoc('opened', true))
   }, [])
 
+  const onOpenInDesktopTrigger = React.useCallback(() => {
+    const baseUrl = `quilt://${bucket}#package=${name}`
+    if (hash) {
+      window.location.assign(`${baseUrl}@${hash}`)
+    } else if (hashOrTag) {
+      window.location.assign(`${baseUrl}:${hashOrTag}`)
+    }
+  }, [])
+
   const onPackageDeleteDialogClose = React.useCallback(() => {
     setDeletionState(
       R.mergeLeft({
@@ -416,6 +425,7 @@ function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayP
                   <RevisionMenu
                     className={classes.button}
                     onDelete={onPackageDeleteDialogOpen}
+                    onDesktop={onOpenInDesktopTrigger}
                   />
                 )}
               </TopBar>
