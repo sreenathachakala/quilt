@@ -18,9 +18,10 @@ import { ExperimentsProvider } from 'components/Experiments'
 import * as Intercom from 'components/Intercom'
 import Layout from 'components/Layout'
 import Placeholder from 'components/Placeholder'
-import DesktopApp from 'containers/DesktopApp'
+import * as DesktopApp from 'containers/DesktopApp'
 import * as Auth from 'containers/Auth'
 import * as Notifications from 'containers/Notifications'
+import OpenInDesktop from 'containers/OpenInDesktop'
 import * as routes from 'constants/routes'
 import * as style from 'constants/style'
 import * as AWS from 'utils/AWS'
@@ -42,12 +43,10 @@ import mkStorage from 'utils/storage'
 import * as Tracking from 'utils/tracking'
 // Load the icons
 /* eslint-disable import/no-unresolved, import/extensions */
-import '!file-loader?name=[name].[ext]!../favicon.ico'
-import '!file-loader?name=[name].[ext]!../quilt-og.png'
+import '!file-loader?name=[name].[ext]!./favicon.ico'
+import '!file-loader?name=[name].[ext]!./quilt-og.png'
 // Import CSS reset and Global Styles
 import WithGlobalStyles from './global-styles'
-
-import StackHost from 'containers/DesktopApp/StackHost'
 
 // listen for Roboto fonts
 fontLoader('Roboto', 'Roboto Mono').then(() => {
@@ -153,13 +152,12 @@ const Root = () => {
 
   // FIXME:
   //   restore nest again
-  //   add OpenInDesktop here
   return (
     <M.MuiThemeProvider theme={style.appTheme}>
       <WithGlobalStyles>
         <FinalBoundary>
           <Sentry.Provider>
-            <StackHost
+            <DesktopApp.StackHost
               onChange={R.pipe(R.prop('configUrl'), setConfigUrl)}
               ipc={IPC}
               onConfig={setConfig}
@@ -211,7 +209,9 @@ const Root = () => {
                                                         <Notifications.WithNotifications>
                                                           <ErrorBoundary>
                                                             <BucketCacheProvider>
-                                                              <DesktopApp />
+                                                              <OpenInDesktop>
+                                                                <DesktopApp.App />
+                                                              </OpenInDesktop>
                                                             </BucketCacheProvider>
                                                           </ErrorBoundary>
                                                         </Notifications.WithNotifications>
@@ -236,7 +236,7 @@ const Root = () => {
                   </RouterProvider>
                 </NamedRoutes.Provider>
               </Store.Provider>
-            </StackHost>
+            </DesktopApp.StackHost>
           </Sentry.Provider>
         </FinalBoundary>
       </WithGlobalStyles>

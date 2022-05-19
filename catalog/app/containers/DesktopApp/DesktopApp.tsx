@@ -8,7 +8,6 @@ import Placeholder from 'components/Placeholder'
 import requireAuth from 'containers/Auth/wrapper'
 import { CatchNotFound, ThrowNotFound } from 'containers/NotFoundPage'
 import { isAdmin } from 'containers/Auth/selectors'
-import OpenInDesktop from 'containers/OpenInDesktop'
 import * as RT from 'utils/reactTools'
 import { useLocation } from 'utils/router'
 
@@ -53,55 +52,50 @@ export default function App() {
   if (!isAwsReady) return <CliReadiness.Placeholder state={awsReadyState} />
 
   return (
-    <OpenInDesktop>
-      <CatchNotFound id={`${l.pathname}${l.search}${l.hash}`}>
-        <Switch>
-          <Route path={paths.home} component={protect(Landing)} exact />
+    <CatchNotFound id={`${l.pathname}${l.search}${l.hash}`}>
+      <Switch>
+        <Route path={paths.home} component={protect(Landing)} exact />
 
-          {!cfg.disableNavigator && (
-            <Route path={paths.admin} component={requireAdmin(Admin)} />
-          )}
+        {!cfg.disableNavigator && (
+          <Route path={paths.admin} component={requireAdmin(Admin)} />
+        )}
 
-          {!cfg.disableNavigator && (
-            <Route path={paths.uriResolver} component={protect(UriResolver)} />
-          )}
+        {!cfg.disableNavigator && (
+          <Route path={paths.uriResolver} component={protect(UriResolver)} />
+        )}
 
-          {!cfg.disableNavigator && (
-            <Route path={paths.bucketRoot} component={protect(Bucket)} />
-          )}
+        {!cfg.disableNavigator && (
+          <Route path={paths.bucketRoot} component={protect(Bucket)} />
+        )}
 
-          {!cfg.disableNavigator && (
-            <Route path={paths.signIn} component={AuthSignIn} exact />
-          )}
-          {!cfg.disableNavigator && (
-            <Route path="/login" component={redirectTo(urls.signIn())} exact />
-          )}
-          {!cfg.disableNavigator && (
-            <Route path={paths.signOut} component={AuthSignOut} exact />
-          )}
-          {!cfg.disableNavigator &&
-            (cfg.passwordAuth === true || cfg.ssoAuth === true) && (
-              <Route path={paths.signUp} component={AuthSignUp} exact />
-            )}
-          {!cfg.disableNavigator && cfg.ssoAuth === true && (
-            <Route path={paths.ssoSignUp} component={AuthSSOSignUp} exact />
-          )}
-          {!cfg.disableNavigator && !!cfg.passwordAuth && (
-            <Route path={paths.passReset} component={AuthPassReset} exact />
-          )}
-          {!cfg.disableNavigator && !!cfg.passwordAuth && (
-            <Route path={paths.passChange} component={AuthPassChange} exact />
-          )}
-          {!cfg.disableNavigator && (
-            <Route path={paths.code} component={AuthCode} exact />
-          )}
-          {!cfg.disableNavigator && (
-            <Route path={paths.activationError} component={AuthActivationError} exact />
-          )}
+        {!cfg.disableNavigator && (
+          <Route path={paths.signIn} component={AuthSignIn} exact />
+        )}
+        {!cfg.disableNavigator && (
+          <Route path="/login" component={redirectTo(urls.signIn())} exact />
+        )}
+        {!cfg.disableNavigator && (
+          <Route path={paths.signOut} component={AuthSignOut} exact />
+        )}
+        {!cfg.disableNavigator && (cfg.passwordAuth === true || cfg.ssoAuth === true) && (
+          <Route path={paths.signUp} component={AuthSignUp} exact />
+        )}
+        {!cfg.disableNavigator && cfg.ssoAuth === true && (
+          <Route path={paths.ssoSignUp} component={AuthSSOSignUp} exact />
+        )}
+        {!cfg.disableNavigator && !!cfg.passwordAuth && (
+          <Route path={paths.passReset} component={AuthPassReset} exact />
+        )}
+        {!cfg.disableNavigator && !!cfg.passwordAuth && (
+          <Route path={paths.passChange} component={AuthPassChange} exact />
+        )}
+        {!cfg.disableNavigator && <Route path={paths.code} component={AuthCode} exact />}
+        {!cfg.disableNavigator && (
+          <Route path={paths.activationError} component={AuthActivationError} exact />
+        )}
 
-          <Route component={protect(ThrowNotFound)} />
-        </Switch>
-      </CatchNotFound>
-    </OpenInDesktop>
+        <Route component={protect(ThrowNotFound)} />
+      </Switch>
+    </CatchNotFound>
   )
 }
