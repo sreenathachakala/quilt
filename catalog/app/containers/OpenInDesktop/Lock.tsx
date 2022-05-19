@@ -54,7 +54,7 @@ export default function Lock() {
       onClose={handleClose}
       open={open}
     >
-      <M.DialogTitle>Action is in progress</M.DialogTitle>
+      <M.DialogTitle>Background action is in progress</M.DialogTitle>
       <M.DialogContent>
         <M.LinearProgress className={classes.progress} />
       </M.DialogContent>

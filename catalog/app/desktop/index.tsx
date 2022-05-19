@@ -151,6 +151,9 @@ const Root = () => {
 
   const configOpts = React.useMemo(() => config || { desktop: true }, [config])
 
+  // FIXME:
+  //   restore nest again
+  //   add OpenInDesktop here
   return (
     <M.MuiThemeProvider theme={style.appTheme}>
       <WithGlobalStyles>
