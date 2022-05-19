@@ -45,9 +45,9 @@ import * as Tracking from 'utils/tracking'
 import '!file-loader?name=[name].[ext]!../favicon.ico'
 import '!file-loader?name=[name].[ext]!../quilt-og.png'
 // Import CSS reset and Global Styles
-import WithGlobalStyles from '../global-styles'
+import WithGlobalStyles from './global-styles'
 
-import StackHost from './StackHost'
+import StackHost from 'containers/DesktopApp/StackHost'
 
 // listen for Roboto fonts
 fontLoader('Roboto', 'Roboto Mono').then(() => {
