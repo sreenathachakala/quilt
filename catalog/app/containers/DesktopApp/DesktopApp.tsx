@@ -36,6 +36,7 @@ const AuthSignIn = RT.mkLazy(() => import('containers/Auth/SignIn'), Placeholder
 const AuthSignOut = RT.mkLazy(() => import('containers/Auth/SignOut'), Placeholder)
 const AuthSignUp = RT.mkLazy(() => import('containers/Auth/SignUp'), Placeholder)
 const Bucket = RT.mkLazy(() => import('containers/Bucket'), Placeholder)
+const UriResolver = RT.mkLazy(() => import('containers/UriResolver'), Placeholder)
 
 const Landing = RT.mkLazy(() => import('website/pages/Landing'), Placeholder)
 
@@ -59,6 +60,10 @@ export default function App() {
 
         {!cfg.disableNavigator && (
           <Route path={paths.admin} component={requireAdmin(Admin)} />
+        )}
+
+        {!cfg.disableNavigator && (
+          <Route path={paths.uriResolver} component={protect(UriResolver)} />
         )}
 
         {!cfg.disableNavigator && (
