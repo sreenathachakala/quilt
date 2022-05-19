@@ -1,4 +1,4 @@
-/* desktop/index.tsx - application entry point */
+/* application entry point */
 /* eslint-disable import/first */
 
 // Import all the third party stuff

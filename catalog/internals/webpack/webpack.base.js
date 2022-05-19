@@ -131,7 +131,7 @@ module.exports = (options) => ({
     }),
     new HtmlWebpackPlugin({
       chunks: ['desktop'],
-      template: 'app/desktop/index.html',
+      template: 'app/desktop.html',
       filename: 'desktop.html',
       inject: true,
     }),
