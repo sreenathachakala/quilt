@@ -33,9 +33,9 @@ const parseJSON = (msg = 'invalid JSON') =>
     throw new ConfigError(`${msg}:\n${src}`, { src, originalError: e })
   })
 
-const fetchConfig = async ({ path, opts = {} }) => {
+const fetchConfig = async ({ path, opts = {}, forceOpts = false }) => {
   try {
-    if (opts.desktop) return opts
+    if (forceOpts) return opts
 
     const res = await fetch(path)
     const text = await res.text()
@@ -86,8 +86,8 @@ const ConfigResource = Cache.createResource({
 
 const Ctx = React.createContext()
 
-export function ConfigProvider({ path, opts, children }) {
-  return <Ctx.Provider value={{ path, opts }}>{children}</Ctx.Provider>
+export function ConfigProvider({ path, opts, forceOpts, children }) {
+  return <Ctx.Provider value={{ path, opts, forceOpts }}>{children}</Ctx.Provider>
 }
 
 export function useConfig({ suspend = true } = {}) {

@@ -149,6 +149,8 @@ const Root = () => {
   const [configUrl, setConfigUrl] = React.useState('')
   const [config, setConfig] = React.useState({})
 
+  const configOpts = React.useMemo(() => config || { desktop: true }, [config])
+
   return (
     <M.MuiThemeProvider theme={style.appTheme}>
       <WithGlobalStyles>
@@ -163,7 +165,11 @@ const Root = () => {
                 <NamedRoutes.Provider routes={routes}>
                   <RouterProvider history={history}>
                     <Cache.Provider>
-                      <Config.Provider path={configUrl} opts={config}>
+                      <Config.Provider
+                        path={configUrl}
+                        opts={configOpts}
+                        forceOpts={!config}
+                      >
                         <React.Suspense fallback={<Placeholder />}>
                           <Sentry.Loader userSelector={sentryUserSelector}>
                             <GraphQLProvider>
