@@ -18,23 +18,15 @@ type LocalFolderInputProps = M.TextFieldProps & Form.FieldProps
 
 export function LocalFolderInput({ input, ...props }: LocalFolderInputProps) {
   const ipc = IPC.use()
+  const { onChange } = input
 
   const handleClick = React.useCallback(async () => {
     const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
     if (!newLocalPath) return
-    input.onChange(newLocalPath)
-  }, [ipc, input.onChange])
+    onChange(newLocalPath)
+  }, [ipc, onChange])
 
-  return (
-    <Form.Field
-      disabled={false}
-      id="localPath"
-      onClick={handleClick}
-      size="small"
-      input={input}
-      {...props}
-    />
-  )
+  return <Form.Field onClick={handleClick} size="small" input={input} {...props} />
 }
 
 interface DataRow {
@@ -56,7 +48,7 @@ function useSyncFolders(): [null | DataRow[], () => void] {
 
     fetchData()
   }, [ipc, key])
-  return folders ? [folders, inc] : [null, inc]
+  return [folders, inc]
 }
 
 interface ConfirmDeletionDialogProps {
@@ -91,17 +83,16 @@ function ConfirmDeletionDialog({
   )
 }
 
-interface AddFolderDialogProps {
+interface ManageFolderDialogProps {
   onCancel: () => void
   onSubmit: (v: DataRow) => void
   value: Partial<DataRow> | null
 }
 
-function ManageFolderDialog({ onCancel, onSubmit, value }: AddFolderDialogProps) {
-  const initialValues = React.useMemo(() => ({ id: value?.id }), [value])
+function ManageFolderDialog({ onCancel, onSubmit, value }: ManageFolderDialogProps) {
   return (
     <M.Dialog open={!!value}>
-      <RF.Form onSubmit={onSubmit} initialValues={initialValues}>
+      <RF.Form onSubmit={onSubmit} initialValues={value}>
         {({ handleSubmit, submitting, submitFailed, hasValidationErrors }) => (
           <>
             <M.DialogTitle>Add local ⇄ s3 folder pair</M.DialogTitle>
@@ -115,7 +106,6 @@ function ManageFolderDialog({ onCancel, onSubmit, value }: AddFolderDialogProps)
                 errors={{
                   required: 'Path to local directory is required',
                 }}
-                initialValue={value?.local}
                 fullWidth
                 margin="normal"
               />
@@ -130,10 +120,9 @@ function ManageFolderDialog({ onCancel, onSubmit, value }: AddFolderDialogProps)
                     validators.s3Url,
                   ) as FF.FieldValidator<any>
                 }
-                initialValue={value?.s3}
                 errors={{
                   required: 'S3 URL is required',
-                  s3Url: 'Enter valid S3 url to package',
+                  s3Url: 'Enter valid S3 URL to package',
                 }}
                 fullWidth
                 margin="normal"
@@ -263,7 +252,7 @@ export default function Sync() {
 
   return (
     <div className={classes.root}>
-      <MetaTitle>{['Buckets', 'Admin']}</MetaTitle>
+      <MetaTitle>{['Sync Folders', 'Admin']}</MetaTitle>
 
       <ManageFolderDialog
         onCancel={() => setSelected(null)}
@@ -278,7 +267,6 @@ export default function Sync() {
       />
 
       <M.Paper>
-        <M.Typography variant="h6"></M.Typography>
         <Table.Toolbar heading="Sync folders" actions={toolbarActions} />
         {folders ? (
           <M.Table size="small">

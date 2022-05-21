@@ -35,7 +35,7 @@ You must select the default role for all new users, else they will
 not be able to sign in to the Quilt catalog.
 The default role is shown in bold.
 
-![](imgs/admin-set-default-role.png)
+![](../imgs/admin-set-default-role.png)
 
 ## Buckets
 
@@ -47,6 +47,17 @@ display settings.
 
 ![](../imgs/admin-buckets-add.png)
 
+
+### S3 events
+
+By default, when you add a bucket to the Quilt stack one of two things will happen:
+
+1. If there is no existing bucket notification, Quilt will attempt to add a new notification
+1. If there is an existing bucket notification, Quilt will use the existing notification if and only if it supports the required events (object creation and deletion)
+
+If either of the above conditions fails, Quilt will not add the bucket in question.
+
+See [S3 Events, EventBridge](EventBridge.md) for more.
 
 ## Settings
 
