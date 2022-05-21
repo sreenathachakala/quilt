@@ -146,7 +146,7 @@ const sentryUserSelector = (state: $TSFixMe) => {
 
 const Root = () => {
   const [configUrl, setConfigUrl] = React.useState('')
-  const [config, setConfig] = React.useState({})
+  const [config, setConfig] = React.useState(null)
 
   const configOpts = React.useMemo(() => config || { desktop: true }, [config])
 
@@ -169,7 +169,7 @@ const Root = () => {
                       <Config.Provider
                         path={configUrl}
                         opts={configOpts}
-                        forceOpts={!config}
+                        forceOpts={!!config}
                       >
                         <React.Suspense fallback={<Placeholder />}>
                           <Sentry.Loader userSelector={sentryUserSelector}>
