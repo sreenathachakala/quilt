@@ -537,6 +537,10 @@ export function NavBar() {
   const links = useLinks()
   const intercom = Intercom.use()
   const classes = useNavBarStyles()
+  const handleReset = () => {
+    localStorage.removeItem('HOST')
+    window.location.reload()
+  }
   return (
     <Container>
       {cfg.disableNavigator || (cfg.alwaysRequiresAuth && isSignIn) ? (
@@ -547,6 +551,9 @@ export function NavBar() {
 
       {!useHamburger && (
         <nav className={classes.nav}>
+          <NavLink component="div" onClick={handleReset}>
+            Reset stack
+          </NavLink>
           {links.map(({ label, ...rest }) => (
             <NavLink
               key={`${label}:${rest.to || rest.href}`}
