@@ -538,6 +538,7 @@ export function NavBar() {
   const intercom = Intercom.use()
   const classes = useNavBarStyles()
   const handleReset = () => {
+    if (!window.confirm('Are you sure you want to reset stack?')) return
     localStorage.removeItem('HOST')
     window.location.reload()
   }
