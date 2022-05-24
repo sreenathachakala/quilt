@@ -38,6 +38,18 @@ let config = {
   ],
 }
 
+interface DevToolsItemIconProps {
+  children: React.ReactNode
+}
+
+function DevToolsItemIcon({ children }: DevToolsItemIconProps) {
+  return (
+    <M.Avatar>
+      <M.Icon>{children}</M.Icon>
+    </M.Avatar>
+  )
+}
+
 const useDevToolsItemStyles = M.makeStyles((t) => ({
   chip: {
     '& + &': {
@@ -53,32 +65,33 @@ const useDevToolsItemStyles = M.makeStyles((t) => ({
 function DevToolsItem({ event }: { event: DevToolsEvent }) {
   const classes = useDevToolsItemStyles()
   const [value, setValue] = React.useState<any>(config)
+  const [expanded, setExpanded] = React.useState(event.command === 'invoke')
   const handleSubmit = React.useCallback(
     (e) => {
-      // TODO: close accordion
       e.preventDefault()
+      setExpanded(false)
       event.resolve(value)
     },
     [event, value],
   )
   return (
-    <M.Accordion>
-      <M.AccordionSummary>
+    <M.Accordion expanded={expanded} onChange={() => setExpanded(R.not)}>
+      <M.AccordionSummary expandIcon={<M.Icon>expand_more</M.Icon>}>
         <M.Chip
           className={classes.chip}
-          icon={<M.Icon>send</M.Icon>}
+          avatar={<DevToolsItemIcon>send_outlined</DevToolsItemIcon>}
           label={event.command}
           variant="outlined"
         />
         <M.Chip
           className={classes.chip}
-          icon={<M.Icon>email</M.Icon>}
+          avatar={<DevToolsItemIcon>email_outlined</DevToolsItemIcon>}
           label={event.eventName}
           variant="outlined"
         />
         <M.Chip
           className={classes.chip}
-          icon={<M.Icon>data_object</M.Icon>}
+          avatar={<DevToolsItemIcon>data_object_outlined</DevToolsItemIcon>}
           label={<PreviewValue value={event.rest} />}
           variant="outlined"
         />
