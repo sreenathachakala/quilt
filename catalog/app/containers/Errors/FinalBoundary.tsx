@@ -3,6 +3,7 @@ import * as M from '@material-ui/core'
 
 import * as style from 'constants/style'
 import { createBoundary } from 'utils/ErrorBoundary'
+import * as Config from 'utils/Config'
 import { CredentialsError } from 'utils/AWS/Credentials'
 
 const useFinalBoundaryStyles = M.makeStyles((t) => ({
@@ -31,8 +32,13 @@ interface FinalBoundaryLayoutProps {
 
 function FinalBoundaryLayout({ error }: FinalBoundaryLayoutProps) {
   const classes = useFinalBoundaryStyles()
+  const { desktop }: { desktop: boolean } = Config.use()
   const onClick = () => window.location.reload()
   const isCredentialsError = error instanceof CredentialsError
+  const handleReset = () => {
+    localStorage.removeItem('HOST')
+    window.location.reload()
+  }
   // TODO: use components/Error
   return (
     // the whole container is clickable because easier reload outdated page is better
@@ -53,6 +59,11 @@ function FinalBoundaryLayout({ error }: FinalBoundaryLayoutProps) {
         <M.Button startIcon={<M.Icon>refresh</M.Icon>} variant="outlined">
           Reload
         </M.Button>
+        {desktop && (
+          <M.Button color="secondary" onClick={handleReset} variant="outlined">
+            Reset Stack settings
+          </M.Button>
+        )}
       </div>
     </div>
   )
