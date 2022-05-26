@@ -95,7 +95,10 @@ export function parse(uri: string): PackageUri {
   return R.reject(R.isNil, { bucket, name, hash, tag, path }) as unknown as PackageUri
 }
 
-export function stringify({ bucket, name, hash, tag, path }: PackageUri) {
+export function stringify(
+  { bucket, name, hash, tag, path }: PackageUri,
+  optSchema?: string,
+) {
   if (!bucket) throw new Error('PackageUri.stringify: missing "bucket"')
   if (!name) throw new Error('PackageUri.stringify: missing "name"')
   if (hash && tag) {
@@ -108,5 +111,6 @@ export function stringify({ bucket, name, hash, tag, path }: PackageUri) {
     pkgSpec += `:${tag}`
   }
   const pathPart = path ? `&path=${encodeURIComponent(path)}` : ''
-  return `quilt+s3://${bucket}#package=${pkgSpec}${pathPart}`
+  const schema = optSchema || 'quilt+s3'
+  return `${schema}://${bucket}#package=${pkgSpec}${pathPart}`
 }
