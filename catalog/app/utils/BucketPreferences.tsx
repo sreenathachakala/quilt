@@ -15,7 +15,7 @@ import * as requests from 'containers/Bucket/requests'
 type SentryInstance = (command: 'captureMessage', message: string) => void
 
 export type ActionPreferences = Record<
-  'copyPackage' | 'createPackage' | 'deleteRevision' | 'revisePackage',
+  'copyPackage' | 'createPackage' | 'deleteRevision' | 'openInDesktop' | 'revisePackage',
   boolean
 >
 
@@ -57,6 +57,7 @@ const defaultPreferences: BucketPreferences = {
       copyPackage: true,
       createPackage: true,
       deleteRevision: false,
+      openInDesktop: true, // FIXME: change to false
       revisePackage: true,
     },
     blocks: {
@@ -84,6 +85,7 @@ const localModePreferences: BucketPreferences = {
       copyPackage: false,
       createPackage: false,
       deleteRevision: false,
+      openInDesktop: false,
       revisePackage: false,
     },
     blocks: {

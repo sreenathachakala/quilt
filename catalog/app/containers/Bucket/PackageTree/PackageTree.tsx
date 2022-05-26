@@ -391,6 +391,9 @@ function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayP
             ? `package/${bucket}/${name}/${hash}/${path}`
             : `package/${bucket}/${name}/${hash}`
 
+          const hasRevisionMenu =
+            preferences?.ui?.actions?.deleteRevision ||
+            preferences?.ui?.actions?.openInDesktop
           return (
             <>
               <TopBar crumbs={crumbs}>
@@ -421,7 +424,7 @@ function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayP
                   onClick={() => setExpandedLocalFolder(true)}
                   path={downloadPath}
                 />
-                {preferences?.ui?.actions?.deleteRevision && (
+                {hasRevisionMenu && (
                   <RevisionMenu
                     className={classes.button}
                     onDelete={onPackageDeleteDialogOpen}
