@@ -3,13 +3,28 @@ jobs:
   licenses:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Checkout Licenses
+        uses: actions/checkout@v3
+        with:
+          repository: quiltdata/licensing
+          path: licensing_ci_temp
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
       - uses: actions/setup-python@v3
         with:
           python-version: '3.7'
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.0'
-      - name: Install Ruby Dependencies
+      - name: Install License Finder
         run: |
           sudo gem install license_finder
+      - name: Debug
+        run: |
+          ls -l
+          echo
+          ls -l licensing_ci_temp
