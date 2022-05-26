@@ -13,6 +13,7 @@ import { Crumb, copyWithoutSpaces, render as renderCrumbs } from 'components/Bre
 import Message from 'components/Message'
 import Placeholder from 'components/Placeholder'
 import * as Preview from 'components/Preview'
+import { OpenInDesktop } from 'containers/OpenInDesktop'
 import AsyncResult from 'utils/AsyncResult'
 import * as AWS from 'utils/AWS'
 import * as BucketPreferences from 'utils/BucketPreferences'
@@ -174,9 +175,18 @@ interface DirDisplayProps {
   hashOrTag: string
   path: string
   crumbs: $TSFixMe[] // Crumb
+  size?: number | null
 }
 
-function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayProps) {
+function DirDisplay({
+  bucket,
+  name,
+  hash,
+  hashOrTag,
+  path,
+  crumbs,
+  size,
+}: DirDisplayProps) {
   const { desktop } = Config.use()
   const history = RRDom.useHistory()
   const { urls } = NamedRoutes.use()
@@ -220,18 +230,14 @@ function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayP
     opened: false,
   })
 
-  const onPackageDeleteDialogOpen = React.useCallback(() => {
-    setDeletionState(R.assoc('opened', true))
-  }, [])
+  const confirmDelete = React.useCallback(
+    () => setDeletionState(R.assoc('opened', true)),
+    [],
+  )
 
-  const onOpenInDesktopTrigger = React.useCallback(() => {
-    const baseUrl = `teleport://${bucket}#package=${name}`
-    if (hash) {
-      window.location.assign(`${baseUrl}@${hash}`)
-    } else if (hashOrTag) {
-      window.location.assign(`${baseUrl}:${hashOrTag}`)
-    }
-  }, [bucket, name, hash, hashOrTag])
+  const [confirmingDesktop, setConfirmingDesktop] = React.useState(false)
+  const confirmDesktop = React.useCallback(() => setConfirmingDesktop(true), [])
+  const unconfirmDesktop = React.useCallback(() => setConfirmingDesktop(false), [])
 
   const onPackageDeleteDialogClose = React.useCallback(() => {
     setDeletionState(
@@ -279,6 +285,13 @@ function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayP
 
   return (
     <>
+      <OpenInDesktop
+        open={confirmingDesktop}
+        packageHandle={packageHandle}
+        onClose={unconfirmDesktop}
+        size={size}
+      />
+
       <PackageCopyDialog
         bucket={bucket}
         hash={hash}
@@ -427,8 +440,8 @@ function DirDisplay({ bucket, name, hash, hashOrTag, path, crumbs }: DirDisplayP
                 {hasRevisionMenu && (
                   <RevisionMenu
                     className={classes.button}
-                    onDelete={onPackageDeleteDialogOpen}
-                    onDesktop={onOpenInDesktopTrigger}
+                    onDelete={confirmDelete}
+                    onDesktop={confirmDesktop}
                   />
                 )}
               </TopBar>
@@ -716,6 +729,7 @@ interface PackageTreeProps {
   mode?: string
   resolvedFrom?: string
   revisionListQuery: UseQueryResult<ResultOf<typeof REVISION_LIST_QUERY>>
+  size?: number | null
 }
 
 function PackageTree({
@@ -727,6 +741,7 @@ function PackageTree({
   mode,
   resolvedFrom,
   revisionListQuery,
+  size,
 }: PackageTreeProps) {
   const classes = useStyles()
   const { urls } = NamedRoutes.use()
@@ -812,6 +827,7 @@ function PackageTree({
                 path,
                 hashOrTag,
                 crumbs,
+                size,
               }}
             />
           ) : (
@@ -888,6 +904,7 @@ function PackageTreeQueries({
             name,
             hashOrTag,
             hash: d.package.revision?.hash,
+            size: d.package.revision?.totalBytes,
             path,
             mode,
             resolvedFrom,
