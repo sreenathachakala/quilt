@@ -16,7 +16,7 @@ export type containers_Bucket_PackageTree_gql_RevisionQuery = {
         readonly revision: Types.Maybe<
           { readonly __typename: 'PackageRevision' } & Pick<
             Types.PackageRevision,
-            'hash' | 'totalBytes'
+            'hash' | 'totalBytes' | 'modified'
           >
         >
       }
@@ -97,6 +97,7 @@ export const containers_Bucket_PackageTree_gql_RevisionDocument = {
                     selections: [
                       { kind: 'Field', name: { kind: 'Name', value: 'hash' } },
                       { kind: 'Field', name: { kind: 'Name', value: 'totalBytes' } },
+                      { kind: 'Field', name: { kind: 'Name', value: 'modified' } },
                     ],
                   },
                 },

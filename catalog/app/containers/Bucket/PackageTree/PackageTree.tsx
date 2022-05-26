@@ -166,6 +166,9 @@ const useDirDisplayStyles = M.makeStyles((t) => ({
     marginLeft: t.spacing(1),
     marginTop: '-3px',
   },
+  fileProperties: {
+    marginRight: t.spacing(1),
+  },
 }))
 
 interface DirDisplayProps {
@@ -175,7 +178,8 @@ interface DirDisplayProps {
   hashOrTag: string
   path: string
   crumbs: $TSFixMe[] // Crumb
-  size?: number | null
+  lastModified?: Date
+  size?: number
 }
 
 function DirDisplay({
@@ -185,6 +189,7 @@ function DirDisplay({
   hashOrTag,
   path,
   crumbs,
+  lastModified,
   size,
 }: DirDisplayProps) {
   const { desktop } = Config.use()
@@ -410,6 +415,11 @@ function DirDisplay({
           return (
             <>
               <TopBar crumbs={crumbs}>
+                <FileProperties
+                  className={classes.fileProperties}
+                  lastModified={lastModified}
+                  size={size}
+                />
                 {preferences?.ui?.actions?.revisePackage && !desktop && (
                   <M.Button
                     className={classes.button}
@@ -729,7 +739,8 @@ interface PackageTreeProps {
   mode?: string
   resolvedFrom?: string
   revisionListQuery: UseQueryResult<ResultOf<typeof REVISION_LIST_QUERY>>
-  size?: number | null
+  lastModified?: Date
+  size?: number
 }
 
 function PackageTree({
@@ -741,6 +752,7 @@ function PackageTree({
   mode,
   resolvedFrom,
   revisionListQuery,
+  lastModified,
   size,
 }: PackageTreeProps) {
   const classes = useStyles()
@@ -827,6 +839,7 @@ function PackageTree({
                 path,
                 hashOrTag,
                 crumbs,
+                lastModified,
                 size,
               }}
             />
@@ -904,7 +917,8 @@ function PackageTreeQueries({
             name,
             hashOrTag,
             hash: d.package.revision?.hash,
-            size: d.package.revision?.totalBytes,
+            lastModified: d.package.revision?.modified || undefined,
+            size: d.package.revision?.totalBytes || undefined,
             path,
             mode,
             resolvedFrom,

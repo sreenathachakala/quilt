@@ -12,7 +12,7 @@ interface OpenInDesktopProps {
   onClose: () => void
   open: boolean
   packageHandle: PackageHandle
-  size?: number | null
+  size?: number
 }
 
 export default function OpenInDesktop({
