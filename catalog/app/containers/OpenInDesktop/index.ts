@@ -1,1 +1,1 @@
-export { default } from './OpenInDesktop'
+export { default as Handler } from './Handler'

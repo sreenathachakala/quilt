@@ -19,7 +19,7 @@ import * as DesktopApp from 'containers/DesktopApp'
 import * as Auth from 'containers/Auth'
 import * as Errors from 'containers/Errors'
 import * as Notifications from 'containers/Notifications'
-import OpenInDesktop from 'containers/OpenInDesktop'
+import * as OpenInDesktop from 'containers/OpenInDesktop'
 import * as routes from 'constants/routes'
 import * as style from 'constants/style'
 import * as AWS from 'utils/AWS'
@@ -138,9 +138,9 @@ const Root = () => {
                                                         <Notifications.WithNotifications>
                                                           <Errors.ErrorBoundary>
                                                             <BucketCacheProvider>
-                                                              <OpenInDesktop>
+                                                              <OpenInDesktop.Handler>
                                                                 <DesktopApp.App />
-                                                              </OpenInDesktop>
+                                                              </OpenInDesktop.Handler>
                                                             </BucketCacheProvider>
                                                           </Errors.ErrorBoundary>
                                                         </Notifications.WithNotifications>
