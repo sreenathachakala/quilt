@@ -7,6 +7,12 @@ export interface PackageHandle {
   hash: string
 }
 
+export const emptyPackageHandle: PackageHandle = {
+  bucket: '',
+  name: '',
+  hash: '',
+}
+
 export function shortenRevision(fullRevision: string): string {
   return R.take(10, fullRevision)
 }

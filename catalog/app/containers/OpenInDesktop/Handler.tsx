@@ -1,7 +1,8 @@
 import * as React from 'react'
 
+import ConfirmDownloadPackage from './ConfirmDownloadPackage'
+// import Lock from './Lock'
 import Navigate from './Navigate'
-import Lock from './Lock'
 
 interface HandlerProps {
   children: React.ReactNode
@@ -9,9 +10,11 @@ interface HandlerProps {
 
 export default function Handler({ children }: HandlerProps) {
   return (
-    <Navigate>
-      <Lock />
-      {children}
-    </Navigate>
+    <ConfirmDownloadPackage>
+      <Navigate>
+        {/* <Lock /> */}
+        {children}
+      </Navigate>
+    </ConfirmDownloadPackage>
   )
 }

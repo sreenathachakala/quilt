@@ -49,17 +49,19 @@ const useConfirmDownloadDialogStyles = M.makeStyles({
 
 interface ConfirmDownloadDialogProps {
   localPath: string
-  onClose: () => void
+  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
+  onCancel: () => void
+  onConfirm: () => void
   open: boolean
   packageHandle: packageHandleUtils.PackageHandle
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
 }
 
 export function ConfirmDialog({
   localPath,
-  onClose,
-  open,
   maxWidth = 'md',
+  onCancel,
+  onConfirm,
+  open,
   packageHandle,
 }: ConfirmDownloadDialogProps) {
   const ipc = IPC.use()
@@ -67,12 +69,12 @@ export function ConfirmDialog({
   const classes = useConfirmDownloadDialogStyles()
   const [syncing, setSyncing] = React.useState(false)
 
-  const handleCancel = React.useCallback(() => onClose(), [onClose])
+  const handleCancel = React.useCallback(() => onCancel(), [onCancel])
   const handleConfirm = React.useCallback(async () => {
     setSyncing(true)
     await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, packageHandle, localPath)
-    onClose()
-  }, [ipc, localPath, onClose, packageHandle])
+    onConfirm()
+  }, [ipc, localPath, onConfirm, packageHandle])
 
   const [fakeProgress, setFakeProgress] = React.useState(0)
   const handleCliOutput = React.useCallback(() => {

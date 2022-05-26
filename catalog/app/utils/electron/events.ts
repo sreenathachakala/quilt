@@ -1,7 +1,6 @@
 export const CLI_OUTPUT = 'cli_output'
 export const CONFIG_GET = 'config_get'
-export const CONFIRM_REQUEST = 'confirm_request'
-export const CONFIRM_RESPONSE = 'confirm_response'
+export const CONFIRM = 'confirm'
 export const CREDENTIALS = 'credentials'
 export const DOWNLOAD_PACKAGE = 'download_package'
 export const LOCALPATH_REQUEST = 'localpath_request' // TODO: OPEN_IN_EXPLORER
