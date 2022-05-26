@@ -917,7 +917,7 @@ function PackageTreeQueries({
             name,
             hashOrTag,
             hash: d.package.revision?.hash,
-            lastModified: d.package.revision?.modified || undefined,
+            lastModified: undefined, // TODO: get d.package.revision?.modified
             size: d.package.revision?.totalBytes || undefined,
             path,
             mode,
