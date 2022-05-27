@@ -29,13 +29,13 @@ export function LocalFolderInput({ input, ...props }: LocalFolderInputProps) {
   return <Form.Field onClick={handleClick} size="small" input={input} {...props} />
 }
 
-interface DataRow {
+export interface DataRow {
   id?: string
   local: string
   s3: string
 }
 
-function useSyncFolders(): [null | DataRow[], () => void] {
+export function useSyncFolders(): [null | DataRow[], () => void] {
   const ipc = IPC.use()
   const [key, setKey] = React.useState(1)
   const inc = React.useCallback(() => setKey(R.inc), [setKey])
@@ -86,16 +86,24 @@ function ConfirmDeletionDialog({
 interface ManageFolderDialogProps {
   onCancel: () => void
   onSubmit: (v: DataRow) => void
+  s3Disabled?: boolean
+  title?: string
   value: Partial<DataRow> | null
 }
 
-function ManageFolderDialog({ onCancel, onSubmit, value }: ManageFolderDialogProps) {
+export function ManageFolderDialog({
+  onCancel,
+  onSubmit,
+  s3Disabled,
+  title,
+  value,
+}: ManageFolderDialogProps) {
   return (
     <M.Dialog open={!!value}>
       <RF.Form onSubmit={onSubmit} initialValues={value}>
         {({ handleSubmit, submitting, submitFailed, hasValidationErrors }) => (
           <>
-            <M.DialogTitle>Add local ⇄ s3 folder pair</M.DialogTitle>
+            <M.DialogTitle>{title || 'Add local ⇄ s3 folder pair'}</M.DialogTitle>
             <M.DialogContent>
               <RF.Field
                 component={LocalFolderInput}
@@ -111,8 +119,9 @@ function ManageFolderDialog({ onCancel, onSubmit, value }: ManageFolderDialogPro
               />
               <RF.Field
                 component={Form.Field}
-                name="s3"
+                disabled={!!s3Disabled}
                 label="S3 bucket + Package name"
+                name="s3"
                 placeholder="s3://bucket/namespace/package"
                 validate={
                   validators.composeAnd(

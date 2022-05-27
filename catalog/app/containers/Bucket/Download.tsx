@@ -52,6 +52,7 @@ interface ConfirmDownloadDialogProps {
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
   onCancel: () => void
   onConfirm: () => void
+  onLocalClick?: () => void
   open: boolean
   packageHandle: packageHandleUtils.PackageHandle
 }
@@ -61,6 +62,7 @@ export function ConfirmDialog({
   maxWidth = 'md',
   onCancel,
   onConfirm,
+  onLocalClick,
   open,
   packageHandle,
 }: ConfirmDownloadDialogProps) {
@@ -109,8 +111,12 @@ export function ConfirmDialog({
             value={fakeProgress === 1 ? 0 : fakeProgress}
           />
         )}
-        From <Mono>{`s3://${packageHandle.bucket}/${packageHandle.name}`}</Mono> to{' '}
-        <Mono>{localPath}</Mono>
+        From <Mono>{`s3://${packageHandle.bucket}/${packageHandle.name}`}</Mono>
+        <br />
+        to <Mono>{localPath}</Mono>
+        <M.IconButton onClick={onLocalClick}>
+          <M.Icon>edit</M.Icon>
+        </M.IconButton>
       </M.DialogContent>
       <M.DialogActions>
         <M.Button disabled={syncing} onClick={handleCancel}>
