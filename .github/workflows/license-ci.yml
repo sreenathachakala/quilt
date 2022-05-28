@@ -38,7 +38,7 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-          f = Path('${{ matrix.project }}
+          f = Path('${{ matrix.project }}')
           f.touch()
           # are there artifacts left over from other matrix instances?
           print(list(f.parent.glob('test_*')))
