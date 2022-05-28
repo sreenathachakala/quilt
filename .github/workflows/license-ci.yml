@@ -3,23 +3,30 @@ jobs:
   licenses:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.LICENSING_REPO_CI_SSH_KEY }}
+          known_hosts: ${{ secrets.LICENSING_REPO_CI_SSH_HOSTS }}
+      - name: Checkout Current Project
         uses: actions/checkout@v3
-
-      - name: Checkout Licenses
+      - name: Checkout Licenses Repo
         uses: actions/checkout@v3
         with:
           repository: quiltdata/licensing
           fetch-depth: 1
           ref: main
           path: licensing_ci_temp
-      - uses: actions/setup-node@v3
+      - name: Install Node
+        uses: actions/setup-node@v3
         with:
           node-version: '16'
-      - uses: actions/setup-python@v3
+      - name: Install Python
+        uses: actions/setup-python@v3
         with:
           python-version: '3.7'
-      - uses: ruby/setup-ruby@v1
+      - name: Install Ruby
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.0'
       - name: Install License Finder
