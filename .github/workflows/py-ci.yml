@@ -1,4 +1,6 @@
-on: push
+# TODO: Re-enable this prior to merge
+#on: push
+on: workflow_dispatch
 jobs:
   linter:
     runs-on: ubuntu-latest

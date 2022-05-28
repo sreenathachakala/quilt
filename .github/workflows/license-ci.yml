@@ -1,13 +1,13 @@
 on: push
 jobs:
-  licenses:
+  license-setup:
+    strategy:
+      matrix:
+        project:
+          - test_1
+          - test_2
     runs-on: ubuntu-latest
     steps:
-#      - name: Install SSH key
-#        uses: shimataro/ssh-key-action@v2
-#        with:
-#          key: ${{ secrets.LICENSING_REPO_CI_SSH_KEY }}
-#          known_hosts: ${{ secrets.LICENSING_REPO_CI_SSH_HOSTS }}
       - name: Checkout Current Project
         uses: actions/checkout@v3
       - name: Checkout Licenses Repo
@@ -35,7 +35,10 @@ jobs:
         run: |
           sudo gem install license_finder
       - name: Debug
+        shell: python
         run: |
-          ls -l
-          echo
-          ls -l licensing_ci_temp
+          from pathlib import Path
+          f = Path('${{ matrix.project }}
+          f.touch()
+          # are there artifacts left over from other matrix instances?
+          print(list(f.parent.glob('test_*')))
