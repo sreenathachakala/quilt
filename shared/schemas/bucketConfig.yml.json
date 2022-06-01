@@ -51,6 +51,11 @@
               "default": true,
               "description": "Hides button triggering Push to Bucket dialog",
               "type": "boolean"
+            },
+            "openInDesktop": {
+              "default": false,
+              "description": "Opens Teleport",
+              "type": "boolean"
             }
           }
         },
