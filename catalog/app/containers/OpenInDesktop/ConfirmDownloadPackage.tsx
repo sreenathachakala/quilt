@@ -4,6 +4,7 @@ import { emptyPackageHandle } from 'utils/packageHandle'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as Download from 'containers/Bucket/Download'
 import * as Sync from 'containers/Admin/Sync'
+import * as s3paths from 'utils/s3paths'
 
 interface ConfirmDownloadPackageProps {
   children: React.ReactNode
@@ -37,13 +38,19 @@ export default function ConfirmDownloadPackage({
   const [folders] = Sync.useSyncFolders()
   const [localEditing, setLocalEditing] = React.useState<Sync.DataRow | null>(null)
   const handleLocalClick = React.useCallback(() => {
-    console.log('Local handle:', localHandle)
     const row = folders?.find(({ id }) => id === localHandle?.id)
-    console.log('handleLocalClick, ROW:', row)
-    setLocalEditing(row || EMPTY_LOCAL_HANDLE)
-  }, [folders, localHandle])
+    setLocalEditing(
+      row || {
+        s3: s3paths.handleToS3Url({
+          bucket: packageHandle.bucket,
+          key: packageHandle.name,
+        }),
+        local: EMPTY_LOCAL_HANDLE.path,
+        id: '',
+      },
+    )
+  }, [folders, localHandle, packageHandle])
   const handleChangeLocalFolder = React.useCallback((row: Sync.DataRow) => {
-    console.log('handleChangeLocalFolder', row)
     setLocalHandle({
       id: row.id || '',
       path: row.local,
@@ -62,7 +69,11 @@ export default function ConfirmDownloadPackage({
         onCancel={() => setLocalEditing(null)}
         onSubmit={handleChangeLocalFolder}
         s3Disabled
-        title="Change local folder path"
+        title={
+          localEditing?.id
+            ? 'Change local folder path'
+            : 'Associate local folder with package'
+        }
         value={localEditing}
       />
 
