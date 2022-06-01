@@ -9,13 +9,15 @@ interface ConfirmDownloadPackageProps {
   children: React.ReactNode
 }
 
+const EMPTY_LOCAL_HANDLE = { id: '', path: '' }
+
 export default function ConfirmDownloadPackage({
   children,
 }: ConfirmDownloadPackageProps) {
   const ipc = IPC.use()
 
   const [packageHandle, setPackageHandle] = React.useState(emptyPackageHandle)
-  const [localHandle, setLocalHandle] = React.useState({ id: '', path: '' })
+  const [localHandle, setLocalHandle] = React.useState(EMPTY_LOCAL_HANDLE)
   const [resolution, setResolution] = React.useState<boolean | null>(false)
 
   const handleConfirmRequest = React.useCallback((_event, action, r, handles) => {
@@ -23,7 +25,7 @@ export default function ConfirmDownloadPackage({
     switch (action) {
       case 'download_package': {
         setPackageHandle(handles.packageHandle)
-        setLocalHandle(handles.localHandle)
+        setLocalHandle(handles.localHandle || EMPTY_LOCAL_HANDLE)
         break
       }
     }
@@ -35,10 +37,13 @@ export default function ConfirmDownloadPackage({
   const [folders] = Sync.useSyncFolders()
   const [localEditing, setLocalEditing] = React.useState<Sync.DataRow | null>(null)
   const handleLocalClick = React.useCallback(() => {
-    const row = folders?.find(({ id }) => id === localHandle.id)
-    if (row) setLocalEditing(row)
+    console.log('Local handle:', localHandle)
+    const row = folders?.find(({ id }) => id === localHandle?.id)
+    console.log('handleLocalClick, ROW:', row)
+    setLocalEditing(row || EMPTY_LOCAL_HANDLE)
   }, [folders, localHandle])
   const handleChangeLocalFolder = React.useCallback((row: Sync.DataRow) => {
+    console.log('handleChangeLocalFolder', row)
     setLocalHandle({
       id: row.id || '',
       path: row.local,
