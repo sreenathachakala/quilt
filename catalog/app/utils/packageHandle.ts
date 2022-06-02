@@ -1,6 +1,8 @@
 import lodashTemplate from 'lodash/template'
 import * as R from 'ramda'
 
+import type { S3HandleBase } from 'utils/s3paths'
+
 export interface PackageHandle {
   bucket: string
   name: string
@@ -11,6 +13,14 @@ export const emptyPackageHandle: PackageHandle = {
   bucket: '',
   name: '',
   hash: '',
+}
+
+export function toS3Handle(packageHandle: PackageHandle): S3HandleBase {
+  return {
+    bucket: packageHandle.bucket,
+    key: packageHandle.name,
+    version: packageHandle.hash,
+  }
 }
 
 export function shortenRevision(fullRevision: string): string {

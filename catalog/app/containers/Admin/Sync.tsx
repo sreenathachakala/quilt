@@ -5,7 +5,6 @@ import * as SyncFolders from 'containers/SyncFolders'
 import MetaTitle from 'utils/MetaTitle'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import StyledLink from 'utils/StyledLink'
-import * as IPC from 'utils/electron/ipc-provider'
 import * as s3paths from 'utils/s3paths'
 
 import * as Table from './Table'
@@ -99,14 +98,14 @@ const useStyles = M.makeStyles((t) => ({
 
 export default function Sync() {
   const classes = useStyles()
-  const ipc = IPC.use()
 
   const [selected, setSelected] = React.useState<Partial<SyncFolders.DataRow> | null>(
     null,
   )
   const [removing, setRemoving] = React.useState<SyncFolders.DataRow | null>(null)
 
-  const [folders, inc] = SyncFolders.useSyncFolders()
+  const [folders, inc] = SyncFolders.useFolders()
+  const { remove, manage } = SyncFolders.useActions()
 
   const toolbarActions = React.useMemo(
     () =>
@@ -126,25 +125,22 @@ export default function Sync() {
 
   const handleRemove = React.useCallback(
     async (row: SyncFolders.DataRow) => {
-      await ipc.invoke(IPC.EVENTS.SYNC_FOLDERS_REMOVE, row)
+      await remove(row)
 
       setRemoving(null)
       inc()
     },
-    [inc, ipc],
+    [inc, remove],
   )
 
   const handleEdit = React.useCallback(
     async (row: SyncFolders.DataRow) => {
-      await ipc.invoke(
-        row.id ? IPC.EVENTS.SYNC_FOLDERS_EDIT : IPC.EVENTS.SYNC_FOLDERS_ADD,
-        row,
-      )
+      await manage(row)
 
       setSelected(null)
       inc()
     },
-    [inc, ipc],
+    [inc, manage],
   )
 
   return (

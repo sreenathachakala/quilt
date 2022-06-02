@@ -323,7 +323,7 @@ function DirDisplay({
   )
 
   const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
-  const [localFolder, setLocalFolder] = Download.useLocalFolder()
+  const [localFolder, setLocalFolder] = Download.useLocalFolder(packageHandle)
 
   return (
     <>

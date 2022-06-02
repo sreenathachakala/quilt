@@ -1,11 +1,14 @@
 import cx from 'classnames'
+import * as FP from 'fp-ts'
 import * as React from 'react'
 import * as M from '@material-ui/core'
 
 import Mono from 'components/Code'
+import * as SyncFolders from 'containers/SyncFolders'
 import * as Config from 'utils/Config'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as packageHandleUtils from 'utils/packageHandle'
+import * as s3paths from 'utils/s3paths'
 import mkStorage from 'utils/storage'
 
 import * as FileView from './FileView'
@@ -177,22 +180,27 @@ const storage = mkStorage({
   [STORAGE_KEYS.LOCAL_FOLDER]: STORAGE_KEYS.LOCAL_FOLDER,
 })
 
-export function useLocalFolder(): [string, (v: string) => void] {
-  const [value, setValue] = React.useState(() => {
-    try {
-      return storage.get(STORAGE_KEYS.LOCAL_FOLDER) || ''
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(error)
-      return ''
-    }
-  })
+export function useLocalFolder(
+  packageHandle: packageHandleUtils.PackageHandle,
+): [string, (v: string) => void] {
+  const [folders, inc] = SyncFolders.useFolders()
+  const { manage } = SyncFolders.useActions()
+  const localHandle = SyncFolders.getLocalHandle(folders, packageHandle)
+
+  const value = React.useMemo(() => localHandle?.path || '', [localHandle])
   const onChange = React.useCallback(
-    (path) => {
-      storage.set(STORAGE_KEYS.LOCAL_FOLDER, path)
-      setValue(path)
+    async (path: string) => {
+      await manage({
+        local: path,
+        s3: FP.function.pipe(
+          packageHandle,
+          packageHandleUtils.toS3Handle,
+          s3paths.handleToS3Url,
+        ),
+      })
+      inc()
     },
-    [setValue],
+    [manage, packageHandle],
   )
   return React.useMemo(() => [value, onChange], [value, onChange])
 }

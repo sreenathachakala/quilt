@@ -382,8 +382,12 @@ function PackageCreationForm({
   // HACK: FIXME: it triggers name validation with correct workflow
   const [hideMeta, setHideMeta] = React.useState(false)
 
+  const packageHandle = React.useMemo(
+    () => ({ bucket, name: initial?.name || '', hash: '' }),
+    [bucket, initial?.name],
+  )
   // TODO: move useLocalFolder to its own component shared by Download and Upload
-  const [defaultLocalFolder] = Download.useLocalFolder()
+  const [defaultLocalFolder] = Download.useLocalFolder(packageHandle)
 
   return (
     <RF.Form

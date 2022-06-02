@@ -1,6 +1,7 @@
+import * as FP from 'fp-ts'
 import * as React from 'react'
 
-import { emptyPackageHandle } from 'utils/packageHandle'
+import { emptyPackageHandle, toS3Handle } from 'utils/packageHandle'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as Download from 'containers/Bucket/Download'
 import * as SyncFolders from 'containers/SyncFolders'
@@ -35,28 +36,31 @@ export default function ConfirmDownloadPackage({
   const handleCancel = React.useCallback(() => setResolution(false), [])
   const handleConfirm = React.useCallback(() => setResolution(true), [])
 
-  const [folders] = SyncFolders.useSyncFolders()
+  const [folders] = SyncFolders.useFolders()
+  const { manage } = SyncFolders.useActions()
   const [localEditing, setLocalEditing] = React.useState<SyncFolders.DataRow | null>(null)
   const handleLocalClick = React.useCallback(() => {
     const row = folders?.find(({ id }) => id === localHandle?.id)
     setLocalEditing(
       row || {
-        s3: s3paths.handleToS3Url({
-          bucket: packageHandle.bucket,
-          key: packageHandle.name,
-        }),
+        s3: FP.function.pipe(packageHandle, toS3Handle, s3paths.handleToS3Url),
         local: EMPTY_LOCAL_HANDLE.path,
         id: '',
       },
     )
   }, [folders, localHandle, packageHandle])
-  const handleChangeLocalFolder = React.useCallback((row: SyncFolders.DataRow) => {
-    setLocalHandle({
-      id: row.id || '',
-      path: row.local,
-    })
-    setLocalEditing(null)
-  }, [])
+  const handleChangeLocalFolder = React.useCallback(
+    async (row: SyncFolders.DataRow) => {
+      await manage(row)
+
+      setLocalHandle({
+        id: row.id || '',
+        path: row.local,
+      })
+      setLocalEditing(null)
+    },
+    [manage],
+  )
 
   React.useEffect(() => {
     ipc.on(IPC.EVENTS.CONFIRM, handleConfirmRequest)
