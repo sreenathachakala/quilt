@@ -8,12 +8,14 @@ import * as s3paths from 'utils/s3paths'
 
 export interface LocalHandle {
   id?: string
+  lastModified?: Date // FIXME: move modified to local field
   path: string
 }
 
 export interface DataRow {
   id?: string
   local: string
+  lastModified?: Date // FIXME: move modified to local field
   s3: string
 }
 
@@ -43,6 +45,7 @@ export function getLocalHandle(
   if (!foundRow) return null
   return {
     id: foundRow.id, // FIXME: this is not id of the local handle
+    lastModified: foundRow.lastModified,
     path: foundRow.local,
   }
 }

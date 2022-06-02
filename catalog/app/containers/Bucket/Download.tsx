@@ -174,12 +174,16 @@ export function LocalFolderInput({ onChange, open, value }: LocalFolderInputProp
 
 export function useLocalFolder(
   packageHandle: packageHandleUtils.PackageHandle,
-): [string, (v: string) => void] {
+): [string, Date | null, (v: string) => void] {
   const [folders, inc] = SyncFolders.useFolders()
   const { manage } = SyncFolders.useActions()
   const localHandle = SyncFolders.getLocalHandle(folders, packageHandle)
 
   const value = React.useMemo(() => localHandle?.path || '', [localHandle])
+  const localModified = React.useMemo(
+    () => localHandle?.lastModified || null,
+    [localHandle],
+  )
   const onChange = React.useCallback(
     async (path: string) => {
       await manage({
@@ -194,5 +198,8 @@ export function useLocalFolder(
     },
     [inc, manage, packageHandle],
   )
-  return React.useMemo(() => [value, onChange], [value, onChange])
+  return React.useMemo(
+    () => [value, localModified, onChange],
+    [value, localModified, onChange],
+  )
 }

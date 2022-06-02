@@ -58,7 +58,7 @@ import DIR_QUERY from './gql/Dir.generated'
 import FILE_QUERY from './gql/File.generated'
 import DELETE_REVISION from './gql/DeleteRevision.generated'
 
-const useOutdatedStyles = M.makeStyles((t) => ({
+const useActionAvailableStyles = M.makeStyles((t) => ({
   inverted: {
     background: '#fff',
     color: t.palette.primary.main,
@@ -74,7 +74,7 @@ interface ActionAvailableProps {
 }
 
 function ActionAvailable({ active, children, inverted, title }: ActionAvailableProps) {
-  const classes = useOutdatedStyles()
+  const classes = useActionAvailableStyles()
   const overridesClasses = React.useMemo(
     () => (inverted ? { badge: classes.inverted } : undefined),
     [classes, inverted],
@@ -323,7 +323,13 @@ function DirDisplay({
   )
 
   const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
-  const [localFolder, setLocalFolder] = Download.useLocalFolder(packageHandle)
+  const [localFolder, localModified, setLocalFolder] =
+    Download.useLocalFolder(packageHandle)
+
+  const modificationsDiff = React.useMemo(() => {
+    if (!localModified || !lastModified) return 0
+    return localModified.valueOf() - lastModified.valueOf()
+  }, [localModified, lastModified])
 
   return (
     <>
@@ -460,8 +466,8 @@ function DirDisplay({
                 />
                 {preferences?.ui?.actions?.revisePackage && (
                   <ActionAvailable
-                    active={true}
-                    title="Local folder is outdaded"
+                    active={modificationsDiff > 0}
+                    title="Your local folder is ahead of remote package"
                     inverted
                   >
                     <M.Button
@@ -485,7 +491,10 @@ function DirDisplay({
                     Push to bucket
                   </CopyButton>
                 )}
-                <ActionAvailable active={true} title="Local folder is outdaded">
+                <ActionAvailable
+                  active={modificationsDiff < 0}
+                  title="Your local folder is behind remote changes"
+                >
                   <Download.DownloadButton
                     className={classes.button}
                     label={path ? 'Download sub-package' : 'Download package'}
