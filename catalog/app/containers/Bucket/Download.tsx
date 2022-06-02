@@ -153,16 +153,6 @@ export function LocalFolderInput({ onChange, open, value }: LocalFolderInputProp
   return (
     <Section
       icon="folder_open"
-      extraSummary={
-        <M.Button
-          style={{ marginLeft: 'auto' }}
-          variant="outlined"
-          color="primary"
-          size="small"
-        >
-          Create package
-        </M.Button>
-      }
       heading="Local folder"
       defaultExpanded={open}
       gutterTop

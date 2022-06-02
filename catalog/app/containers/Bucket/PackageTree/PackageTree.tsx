@@ -58,6 +58,43 @@ import DIR_QUERY from './gql/Dir.generated'
 import FILE_QUERY from './gql/File.generated'
 import DELETE_REVISION from './gql/DeleteRevision.generated'
 
+const useOutdatedStyles = M.makeStyles((t) => ({
+  inverted: {
+    background: '#fff',
+    color: t.palette.primary.main,
+    boxShadow: `0 0 1px ${t.palette.primary.main}`,
+  },
+}))
+
+interface ActionAvailableProps {
+  active: boolean
+  children: React.ReactNode
+  title: string
+  inverted?: boolean
+}
+
+function ActionAvailable({ active, children, inverted, title }: ActionAvailableProps) {
+  const classes = useOutdatedStyles()
+  const overridesClasses = React.useMemo(
+    () => (inverted ? { badge: classes.inverted } : undefined),
+    [classes, inverted],
+  )
+  if (!active) return <>{children}</>
+  return (
+    <M.Badge
+      classes={overridesClasses}
+      badgeContent={
+        <M.Tooltip title={title}>
+          <span>!</span>
+        </M.Tooltip>
+      }
+      color="primary"
+    >
+      {children}
+    </M.Badge>
+  )
+}
+
 /*
 function ExposeLinkedData({ bucketCfg, bucket, name, hash, modified }) {
   const sign = AWS.Signer.useS3Signer()
@@ -421,17 +458,23 @@ function DirDisplay({
                   lastModified={lastModified}
                   size={size}
                 />
-                {preferences?.ui?.actions?.revisePackage && !desktop && (
-                  <M.Button
-                    className={classes.button}
-                    variant="contained"
-                    color="primary"
-                    size="small"
-                    style={{ marginTop: -3, marginBottom: -3, flexShrink: 0 }}
-                    onClick={updateDialog.open}
+                {preferences?.ui?.actions?.revisePackage && (
+                  <ActionAvailable
+                    active={true}
+                    title="Local folder is outdaded"
+                    inverted
                   >
-                    Revise package
-                  </M.Button>
+                    <M.Button
+                      className={classes.button}
+                      variant="contained"
+                      color="primary"
+                      size="small"
+                      style={{ marginTop: -3, marginBottom: -3, flexShrink: 0 }}
+                      onClick={updateDialog.open}
+                    >
+                      Revise package
+                    </M.Button>
+                  </ActionAvailable>
                 )}
                 {preferences?.ui?.actions?.copyPackage && (
                   <CopyButton
@@ -442,21 +485,14 @@ function DirDisplay({
                     Push to bucket
                   </CopyButton>
                 )}
-                <M.Badge
-                  badgeContent={
-                    <M.Tooltip title="Local folder is outdaded">
-                      <span>!</span>
-                    </M.Tooltip>
-                  }
-                  color="primary"
-                >
+                <ActionAvailable active={true} title="Local folder is outdaded">
                   <Download.DownloadButton
                     className={classes.button}
                     label={path ? 'Download sub-package' : 'Download package'}
                     onClick={() => setExpandedLocalFolder(true)}
                     path={downloadPath}
                   />
-                </M.Badge>
+                </ActionAvailable>
                 {hasRevisionMenu && (
                   <RevisionMenu
                     className={classes.button}
