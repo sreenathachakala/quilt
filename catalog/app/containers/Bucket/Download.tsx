@@ -9,7 +9,6 @@ import * as Config from 'utils/Config'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as packageHandleUtils from 'utils/packageHandle'
 import * as s3paths from 'utils/s3paths'
-import mkStorage from 'utils/storage'
 
 import * as FileView from './FileView'
 import Section from './Section'
@@ -173,13 +172,6 @@ export function LocalFolderInput({ onChange, open, value }: LocalFolderInputProp
   )
 }
 
-const STORAGE_KEYS = {
-  LOCAL_FOLDER: 'LOCAL_FOLDER',
-}
-const storage = mkStorage({
-  [STORAGE_KEYS.LOCAL_FOLDER]: STORAGE_KEYS.LOCAL_FOLDER,
-})
-
 export function useLocalFolder(
   packageHandle: packageHandleUtils.PackageHandle,
 ): [string, (v: string) => void] {
@@ -200,7 +192,7 @@ export function useLocalFolder(
       })
       inc()
     },
-    [manage, packageHandle],
+    [inc, manage, packageHandle],
   )
   return React.useMemo(() => [value, onChange], [value, onChange])
 }

@@ -24,8 +24,8 @@ export function useFolders(): [null | DataRow[], () => void] {
   const [folders, setFolders] = React.useState<null | DataRow[]>(null)
   React.useEffect(() => {
     async function fetchData() {
-      const folders = await ipc.invoke(IPC.EVENTS.SYNC_FOLDERS_LIST)
-      setFolders(folders)
+      const foldersList = await ipc.invoke(IPC.EVENTS.SYNC_FOLDERS_LIST)
+      setFolders(foldersList)
     }
 
     fetchData()
