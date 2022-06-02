@@ -442,12 +442,21 @@ function DirDisplay({
                     Push to bucket
                   </CopyButton>
                 )}
-                <Download.DownloadButton
-                  className={classes.button}
-                  label={path ? 'Download sub-package' : 'Download package'}
-                  onClick={() => setExpandedLocalFolder(true)}
-                  path={downloadPath}
-                />
+                <M.Badge
+                  badgeContent={
+                    <M.Tooltip title="Local folder is outdaded">
+                      <span>!</span>
+                    </M.Tooltip>
+                  }
+                  color="primary"
+                >
+                  <Download.DownloadButton
+                    className={classes.button}
+                    label={path ? 'Download sub-package' : 'Download package'}
+                    onClick={() => setExpandedLocalFolder(true)}
+                    path={downloadPath}
+                  />
+                </M.Badge>
                 {hasRevisionMenu && (
                   <RevisionMenu
                     className={classes.button}
