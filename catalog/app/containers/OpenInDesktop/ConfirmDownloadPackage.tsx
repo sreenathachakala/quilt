@@ -36,7 +36,7 @@ export default function ConfirmDownloadPackage({
 
   const [folders] = SyncFolders.useFolders()
   const { manage } = SyncFolders.useActions()
-  const [localEditing, setLocalEditing] = React.useState<SyncFolders.DataRow | null>(null)
+  const [localEditing, setLocalEditing] = React.useState<SyncFolders.SyncGroup | null>(null)
   const handleLocalClick = React.useCallback(() => {
     const row = folders?.find(({ id }) => id === localHandle?.id)
     setLocalEditing(
@@ -48,7 +48,7 @@ export default function ConfirmDownloadPackage({
     )
   }, [folders, localHandle, packageHandle])
   const handleChangeLocalFolder = React.useCallback(
-    async (row: SyncFolders.DataRow) => {
+    async (row: SyncFolders.SyncGroup) => {
       await manage(row)
 
       setLocalHandle({

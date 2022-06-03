@@ -11,8 +11,8 @@ import * as Table from './Table'
 
 interface ConfirmDeletionDialogProps {
   onCancel: () => void
-  onSubmit: (v: SyncFolders.DataRow) => void
-  value: SyncFolders.DataRow | null
+  onSubmit: (v: SyncFolders.SyncGroup) => void
+  value: SyncFolders.SyncGroup | null
 }
 
 function ConfirmDeletionDialog({
@@ -65,9 +65,9 @@ function PackageLink({ packageHandle }: PackageLinkProps) {
 }
 
 interface TableRowProps {
-  onEdit: (v: SyncFolders.DataRow) => void
-  onRemove: (v: SyncFolders.DataRow) => void
-  row: SyncFolders.DataRow
+  onEdit: (v: SyncFolders.SyncGroup) => void
+  onRemove: (v: SyncFolders.SyncGroup) => void
+  row: SyncFolders.SyncGroup
 }
 
 function TableRow({ onEdit, onRemove, row }: TableRowProps) {
@@ -109,10 +109,10 @@ const useStyles = M.makeStyles((t) => ({
 export default function Sync() {
   const classes = useStyles()
 
-  const [selected, setSelected] = React.useState<Partial<SyncFolders.DataRow> | null>(
+  const [selected, setSelected] = React.useState<Partial<SyncFolders.SyncGroup> | null>(
     null,
   )
-  const [removing, setRemoving] = React.useState<SyncFolders.DataRow | null>(null)
+  const [removing, setRemoving] = React.useState<SyncFolders.SyncGroup | null>(null)
 
   const [folders, inc] = SyncFolders.useFolders()
   const { remove, manage } = SyncFolders.useActions()
@@ -134,7 +134,7 @@ export default function Sync() {
   )
 
   const handleRemove = React.useCallback(
-    async (row: SyncFolders.DataRow) => {
+    async (row: SyncFolders.SyncGroup) => {
       await remove(row)
 
       setRemoving(null)
@@ -144,7 +144,7 @@ export default function Sync() {
   )
 
   const handleEdit = React.useCallback(
-    async (row: SyncFolders.DataRow) => {
+    async (row: SyncFolders.SyncGroup) => {
       await manage(row)
 
       setSelected(null)

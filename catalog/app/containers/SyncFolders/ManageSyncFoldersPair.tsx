@@ -7,7 +7,7 @@ import * as IPC from 'utils/electron/ipc-provider'
 import { fromS3Url, toS3Url } from 'utils/packageHandle'
 import * as validators from 'utils/validators'
 
-import { DataRow } from './data'
+import { SyncGroup } from './data'
 
 export interface FieldProps {
   errors: Record<string, React.ReactNode>
@@ -52,10 +52,10 @@ export function LocalFolderInput({ input, ...props }: LocalFolderInputProps) {
 
 interface ManageFolderDialogProps {
   onCancel: () => void
-  onSubmit: (v: DataRow) => void
+  onSubmit: (v: SyncGroup) => void
   s3Disabled?: boolean
   title?: string
-  value: Partial<DataRow> | null
+  value: Partial<SyncGroup> | null
 }
 export default function ManageFolderDialog({
   onCancel,
