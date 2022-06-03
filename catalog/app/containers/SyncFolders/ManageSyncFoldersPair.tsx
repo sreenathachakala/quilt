@@ -4,6 +4,7 @@ import * as RF from 'react-final-form'
 import * as M from '@material-ui/core'
 
 import * as IPC from 'utils/electron/ipc-provider'
+import { fromS3Url, toS3Url } from 'utils/packageHandle'
 import * as validators from 'utils/validators'
 
 import { DataRow } from './data'
@@ -63,9 +64,31 @@ export default function ManageFolderDialog({
   title,
   value,
 }: ManageFolderDialogProps) {
+  const initialValues = React.useMemo(
+    () => ({
+      s3: toS3Url(value?.packageHandle),
+      local: value?.local,
+    }),
+    [value],
+  )
+  const onSubmitWrapped = React.useCallback(
+    ({ local, s3 }) => {
+      const packageHandle = fromS3Url(s3)
+      if (!packageHandle)
+        return {
+          [FF.FORM_ERROR]: 'S3 url is invalid',
+        }
+
+      onSubmit({
+        local,
+        packageHandle,
+      })
+    },
+    [onSubmit],
+  )
   return (
     <M.Dialog open={!!value}>
-      <RF.Form onSubmit={onSubmit} initialValues={value}>
+      <RF.Form onSubmit={onSubmitWrapped} initialValues={initialValues}>
         {({ handleSubmit, submitting, submitFailed, hasValidationErrors }) => (
           <>
             <M.DialogTitle>{title || 'Add local ⇄ s3 folder pair'}</M.DialogTitle>

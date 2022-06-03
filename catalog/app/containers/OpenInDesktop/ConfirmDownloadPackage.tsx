@@ -1,11 +1,9 @@
-import * as FP from 'fp-ts'
 import * as React from 'react'
 
-import { emptyPackageHandle, toS3Handle } from 'utils/packageHandle'
+import { emptyPackageHandle } from 'utils/packageHandle'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as Download from 'containers/Bucket/Download'
 import * as SyncFolders from 'containers/SyncFolders'
-import * as s3paths from 'utils/s3paths'
 
 interface ConfirmDownloadPackageProps {
   children: React.ReactNode
@@ -43,7 +41,7 @@ export default function ConfirmDownloadPackage({
     const row = folders?.find(({ id }) => id === localHandle?.id)
     setLocalEditing(
       row || {
-        s3: FP.function.pipe(packageHandle, toS3Handle, s3paths.handleToS3Url),
+        packageHandle,
         local: EMPTY_LOCAL_HANDLE.path,
         id: '',
       },

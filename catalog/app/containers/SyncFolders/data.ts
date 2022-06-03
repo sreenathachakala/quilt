@@ -1,10 +1,8 @@
-import * as FP from 'fp-ts'
 import * as R from 'ramda'
 import * as React from 'react'
 
 import * as IPC from 'utils/electron/ipc-provider'
-import { PackageHandle, toS3Handle } from 'utils/packageHandle'
-import * as s3paths from 'utils/s3paths'
+import { PackageHandle, areEqual } from 'utils/packageHandle'
 
 export interface LocalHandle {
   id?: string
@@ -16,7 +14,7 @@ export interface DataRow {
   id?: string
   local: string
   lastModified?: Date // FIXME: move modified to local field
-  s3: string
+  packageHandle: PackageHandle
 }
 
 export function useFolders(): [null | DataRow[], () => void] {
@@ -35,18 +33,18 @@ export function useFolders(): [null | DataRow[], () => void] {
   return [folders, inc]
 }
 
+// TODO: getGroup
 export function getLocalHandle(
-  folders: DataRow[] | null,
+  groups: DataRow[] | null,
   packageHandle: PackageHandle,
 ): LocalHandle | null {
-  if (!folders) return null
-  const url = FP.function.pipe(packageHandle, toS3Handle, s3paths.handleToS3Url)
-  const foundRow = folders?.find(({ s3 }) => url.includes(s3))
-  if (!foundRow) return null
+  if (!groups) return null
+  const foundGroup = groups?.find((group) => areEqual(group.packageHandle, packageHandle))
+  if (!foundGroup) return null
   return {
-    id: foundRow.id, // FIXME: this is not id of the local handle
-    lastModified: foundRow.lastModified,
-    path: foundRow.local,
+    id: foundGroup.id, // FIXME: this is not id of the local handle
+    lastModified: foundGroup.lastModified,
+    path: foundGroup.local,
   }
 }
 

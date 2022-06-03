@@ -5,7 +5,7 @@ import * as SyncFolders from 'containers/SyncFolders'
 import MetaTitle from 'utils/MetaTitle'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import StyledLink from 'utils/StyledLink'
-import * as s3paths from 'utils/s3paths'
+import { PackageHandle, toS3Url } from 'utils/packageHandle'
 
 import * as Table from './Table'
 
@@ -27,7 +27,7 @@ function ConfirmDeletionDialog({
     <M.Dialog open={!!value}>
       <M.DialogTitle>Remove local ⇄ s3 folder pair</M.DialogTitle>
       <M.DialogContent>
-        Confirm deletion of {value?.local}⇄{value?.s3} sync pair
+        Confirm deletion of {value?.local}⇄{toS3Url(value?.packageHandle)} sync pair
       </M.DialogContent>
       <M.DialogActions>
         <M.Button onClick={onCancel} color="primary">
@@ -50,6 +50,20 @@ const useTableRowStyles = M.makeStyles({
   },
 })
 
+interface PackageLinkProps {
+  packageHandle: PackageHandle
+}
+
+function PackageLink({ packageHandle }: PackageLinkProps) {
+  const { urls } = NamedRoutes.use()
+  const { name, bucket } = packageHandle
+  return (
+    <StyledLink to={urls.bucketPackageDetail(bucket, name)}>
+      {toS3Url(packageHandle)}
+    </StyledLink>
+  )
+}
+
 interface TableRowProps {
   onEdit: (v: SyncFolders.DataRow) => void
   onRemove: (v: SyncFolders.DataRow) => void
@@ -58,17 +72,13 @@ interface TableRowProps {
 
 function TableRow({ onEdit, onRemove, row }: TableRowProps) {
   const classes = useTableRowStyles()
-  const { urls } = NamedRoutes.use()
-  const handle = s3paths.parseS3Url(row.s3)
   const handleRemove = React.useCallback(() => onRemove(row), [onRemove, row])
   const handleEdit = React.useCallback(() => onEdit(row), [onEdit, row])
   return (
     <M.TableRow hover>
       <M.TableCell>{row.local}</M.TableCell>
       <M.TableCell>
-        <StyledLink to={urls.bucketPackageDetail(handle.bucket, handle.key)}>
-          {row.s3}
-        </StyledLink>
+        <PackageLink packageHandle={row.packageHandle} />
       </M.TableCell>
       <M.TableCell align="right">
         <M.Tooltip title="Remove">

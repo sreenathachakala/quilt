@@ -1,5 +1,4 @@
 import cx from 'classnames'
-import * as FP from 'fp-ts'
 import * as React from 'react'
 import * as M from '@material-ui/core'
 
@@ -8,7 +7,6 @@ import * as SyncFolders from 'containers/SyncFolders'
 import * as Config from 'utils/Config'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as packageHandleUtils from 'utils/packageHandle'
-import * as s3paths from 'utils/s3paths'
 
 import * as FileView from './FileView'
 import Section from './Section'
@@ -188,11 +186,7 @@ export function useLocalFolder(
     async (path: string) => {
       await manage({
         local: path,
-        s3: FP.function.pipe(
-          packageHandle,
-          packageHandleUtils.toS3Handle,
-          s3paths.handleToS3Url,
-        ),
+        packageHandle,
       })
       inc()
     },
