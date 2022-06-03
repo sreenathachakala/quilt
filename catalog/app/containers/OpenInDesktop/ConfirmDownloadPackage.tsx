@@ -23,7 +23,7 @@ export default function ConfirmDownloadPackage({
   const handleConfirmRequest = React.useCallback((_event, action, r, syncGroup) => {
     setResolution(r)
     switch (action) {
-      case IPC.EVENTS.DOWNLOAD_PACKAGE: {
+      case 'download_package': {
         setPackageHandle(syncGroup.packageHandle)
         setLocalHandle(syncGroup.localHandle || EMPTY_LOCAL_HANDLE)
         break
@@ -81,7 +81,7 @@ export default function ConfirmDownloadPackage({
       />
 
       <Download.ConfirmDialog
-        localPath={localHandle?.path || ''}
+        localHandle={localHandle}
         onCancel={handleCancel}
         onConfirm={handleConfirm}
         open={resolution === null}

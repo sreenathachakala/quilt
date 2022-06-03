@@ -3,6 +3,7 @@ import * as React from 'react'
 import * as M from '@material-ui/core'
 
 import Mono from 'components/Code'
+import * as SyncFolders from 'containers/SyncFolders'
 import * as Config from 'utils/Config'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as packageHandleUtils from 'utils/packageHandle'
@@ -37,6 +38,52 @@ export function DownloadButton({ className, label, onClick, path }: DownloadButt
   return <FileView.ZipDownloadForm className={className} label={label} suffix={path} />
 }
 
+interface ConfirmDialogContentProps {
+  packageHandle: packageHandleUtils.PackageHandleBase
+  localHandle: SyncFolders.LocalHandle | null
+  onLocalClick?: () => void
+}
+
+function ConfirmDialogContent({
+  localHandle,
+  onLocalClick,
+  packageHandle,
+}: ConfirmDialogContentProps) {
+  return (
+    <M.Stepper activeStep={!localHandle?.path ? 1 : 2} orientation="vertical">
+      <M.Step>
+        <M.StepLabel>
+          <M.Typography>
+            From <Mono>{`s3://${packageHandle.bucket}/${packageHandle.name}`}</Mono>
+          </M.Typography>
+        </M.StepLabel>
+      </M.Step>
+      <M.Step>
+        {localHandle?.path ? (
+          <M.StepLabel>
+            <M.Typography>
+              to <Mono>{localHandle?.path}</Mono>
+            </M.Typography>
+          </M.StepLabel>
+        ) : (
+          <M.StepLabel>
+            <M.Typography>Local handle wasn't set</M.Typography>
+          </M.StepLabel>
+        )}
+        <M.StepContent>
+          <M.Button
+            startIcon={<M.Icon>edit</M.Icon>}
+            onClick={onLocalClick}
+            variant="outlined"
+          >
+            {localHandle?.path ? 'Change local handle' : 'Add local handle'}
+          </M.Button>
+        </M.StepContent>
+      </M.Step>
+    </M.Stepper>
+  )
+}
+
 const useConfirmDownloadDialogStyles = M.makeStyles({
   progressbar: {
     margin: '0 0 16px',
@@ -47,17 +94,17 @@ const useConfirmDownloadDialogStyles = M.makeStyles({
 })
 
 interface ConfirmDownloadDialogProps {
-  localPath: string
+  localHandle: SyncFolders.LocalHandle | null
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | false
   onCancel: () => void
   onConfirm: () => void
   onLocalClick?: () => void
   open: boolean
-  packageHandle: packageHandleUtils.PackageHandle
+  packageHandle: packageHandleUtils.PackageHandleBase
 }
 
 export function ConfirmDialog({
-  localPath,
+  localHandle,
   maxWidth = 'md',
   onCancel,
   onConfirm,
@@ -73,9 +120,9 @@ export function ConfirmDialog({
   const handleCancel = React.useCallback(() => onCancel(), [onCancel])
   const handleConfirm = React.useCallback(async () => {
     setSyncing(true)
-    await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, packageHandle, localPath)
+    await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, packageHandle, localHandle)
     onConfirm()
-  }, [ipc, localPath, onConfirm, packageHandle])
+  }, [ipc, localHandle, onConfirm, packageHandle])
 
   const [fakeProgress, setFakeProgress] = React.useState(0)
   const handleCliOutput = React.useCallback(() => {
@@ -94,6 +141,8 @@ export function ConfirmDialog({
       ipc.off(IPC.EVENTS.CLI_OUTPUT, handleCliOutput)
     }
   }, [ipc, handleCliOutput])
+  // TODO: indeterminate always, change to circular
+  //       move determinate to its own component, tiny line under header
   const progressVariant = fakeProgress ? 'determinate' : 'indeterminate'
 
   return (
@@ -110,19 +159,18 @@ export function ConfirmDialog({
             value={fakeProgress === 1 ? 0 : fakeProgress}
           />
         )}
-        From <Mono>{`s3://${packageHandle.bucket}/${packageHandle.name}`}</Mono>
-        <br />
-        to <Mono>{localPath}</Mono>
-        <M.IconButton onClick={onLocalClick}>
-          <M.Icon>edit</M.Icon>
-        </M.IconButton>
+        <ConfirmDialogContent
+          localHandle={localHandle}
+          onLocalClick={onLocalClick}
+          packageHandle={packageHandle}
+        />
       </M.DialogContent>
       <M.DialogActions>
         <M.Button disabled={syncing} onClick={handleCancel}>
           Cancel
         </M.Button>
         <M.Button
-          disabled={syncing}
+          disabled={syncing || !localHandle?.path}
           color="primary"
           onClick={handleConfirm}
           variant="contained"

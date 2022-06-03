@@ -370,7 +370,7 @@ function DirDisplay({
       })}
 
       <Download.ConfirmDialog
-        localPath={localHandle?.path || ''}
+        localHandle={localHandle}
         onCancel={() => setExpandedLocalFolder(false)}
         onConfirm={() => setExpandedLocalFolder(false)}
         open={!!localHandle && !!expandedLocalFolder}
