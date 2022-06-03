@@ -27,7 +27,8 @@ function ConfirmDeletionDialog({
     <M.Dialog open={!!value}>
       <M.DialogTitle>Remove local ⇄ s3 folder pair</M.DialogTitle>
       <M.DialogContent>
-        Confirm deletion of {value?.local}⇄{toS3Url(value?.packageHandle)} sync pair
+        Confirm deletion of {value?.localHandle.path}⇄{toS3Url(value?.packageHandle)} sync
+        pair
       </M.DialogContent>
       <M.DialogActions>
         <M.Button onClick={onCancel} color="primary">
@@ -76,7 +77,7 @@ function TableRow({ onEdit, onRemove, row }: TableRowProps) {
   const handleEdit = React.useCallback(() => onEdit(row), [onEdit, row])
   return (
     <M.TableRow hover>
-      <M.TableCell>{row.local}</M.TableCell>
+      <M.TableCell>{row.localHandle.path}</M.TableCell>
       <M.TableCell>
         <PackageLink packageHandle={row.packageHandle} />
       </M.TableCell>

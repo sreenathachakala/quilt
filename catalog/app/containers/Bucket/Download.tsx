@@ -177,17 +177,23 @@ export function useLocalFolder(
   const { manage } = SyncFolders.useActions()
   const syncGroup = SyncFolders.getSyncGroup(folders, packageHandle)
 
-  const value = React.useMemo(() => syncGroup?.local || '', [syncGroup])
-  const localModified = React.useMemo(() => syncGroup?.lastModified || null, [syncGroup])
+  const value = React.useMemo(() => syncGroup?.localHandle.path || '', [syncGroup])
+  const localModified = React.useMemo(
+    () => syncGroup?.localHandle.lastModified || null,
+    [syncGroup],
+  )
   const onChange = React.useCallback(
     async (path: string) => {
       await manage({
-        local: path,
+        id: syncGroup?.id,
+        localHandle: {
+          path,
+        },
         packageHandle,
       })
       inc()
     },
-    [inc, manage, packageHandle],
+    [inc, manage, packageHandle, syncGroup],
   )
   return React.useMemo(
     () => [value, localModified, onChange],

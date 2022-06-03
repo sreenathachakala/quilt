@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-import { emptyPackageHandle } from 'utils/packageHandle'
+import { areEqual, emptyPackageHandle } from 'utils/packageHandle'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as Download from 'containers/Bucket/Download'
 import * as SyncFolders from 'containers/SyncFolders'
@@ -9,7 +9,7 @@ interface ConfirmDownloadPackageProps {
   children: React.ReactNode
 }
 
-const EMPTY_LOCAL_HANDLE = { id: '', path: '' }
+const EMPTY_LOCAL_HANDLE = { path: '' }
 
 export default function ConfirmDownloadPackage({
   children,
@@ -25,7 +25,7 @@ export default function ConfirmDownloadPackage({
     switch (action) {
       case IPC.EVENTS.DOWNLOAD_PACKAGE: {
         setPackageHandle(syncGroup.packageHandle)
-        setLocalHandle({ path: syncGroup.local, id: syncGroup.id } || EMPTY_LOCAL_HANDLE)
+        setLocalHandle(syncGroup.localHandle || EMPTY_LOCAL_HANDLE)
         break
       }
     }
@@ -36,25 +36,26 @@ export default function ConfirmDownloadPackage({
 
   const [folders] = SyncFolders.useFolders()
   const { manage } = SyncFolders.useActions()
-  const [localEditing, setLocalEditing] = React.useState<SyncFolders.SyncGroup | null>(null)
+  const [localEditing, setLocalEditing] = React.useState<SyncFolders.SyncGroup | null>(
+    null,
+  )
   const handleLocalClick = React.useCallback(() => {
-    const row = folders?.find(({ id }) => id === localHandle?.id)
+    const syncGroup = folders?.find((group) =>
+      areEqual(packageHandle, group.packageHandle),
+    )
     setLocalEditing(
-      row || {
+      syncGroup || {
         packageHandle,
-        local: EMPTY_LOCAL_HANDLE.path,
+        localHandle: EMPTY_LOCAL_HANDLE,
         id: '',
       },
     )
-  }, [folders, localHandle, packageHandle])
+  }, [folders, packageHandle])
   const handleChangeLocalFolder = React.useCallback(
     async (row: SyncFolders.SyncGroup) => {
       await manage(row)
 
-      setLocalHandle({
-        id: row.id || '',
-        path: row.local,
-      })
+      setLocalHandle(row.localHandle || EMPTY_LOCAL_HANDLE)
       setLocalEditing(null)
     },
     [manage],

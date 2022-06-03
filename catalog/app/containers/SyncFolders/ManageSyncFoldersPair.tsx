@@ -57,6 +57,7 @@ interface ManageFolderDialogProps {
   title?: string
   value: Partial<SyncGroup> | null
 }
+
 export default function ManageFolderDialog({
   onCancel,
   onSubmit,
@@ -67,7 +68,7 @@ export default function ManageFolderDialog({
   const initialValues = React.useMemo(
     () => ({
       s3: toS3Url(value?.packageHandle),
-      local: value?.local,
+      local: value?.localHandle?.path,
     }),
     [value],
   )
@@ -80,7 +81,10 @@ export default function ManageFolderDialog({
         }
 
       onSubmit({
-        local,
+        localHandle: {
+          path: local,
+          lastModified: new Date(),
+        },
         packageHandle,
       })
     },

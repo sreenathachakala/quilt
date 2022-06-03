@@ -12,8 +12,7 @@ export interface LocalHandle {
 
 export interface SyncGroup {
   id?: string
-  local: string
-  lastModified?: Date // FIXME: move modified to local field
+  localHandle: LocalHandle
   packageHandle: PackageHandleBase
 }
 
