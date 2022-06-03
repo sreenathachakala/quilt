@@ -5,7 +5,7 @@ import * as SyncFolders from 'containers/SyncFolders'
 import MetaTitle from 'utils/MetaTitle'
 import * as NamedRoutes from 'utils/NamedRoutes'
 import StyledLink from 'utils/StyledLink'
-import { PackageHandle, toS3Url } from 'utils/packageHandle'
+import { PackageHandleBase, toS3Url } from 'utils/packageHandle'
 
 import * as Table from './Table'
 
@@ -51,7 +51,7 @@ const useTableRowStyles = M.makeStyles({
 })
 
 interface PackageLinkProps {
-  packageHandle: PackageHandle
+  packageHandle: PackageHandleBase
 }
 
 function PackageLink({ packageHandle }: PackageLinkProps) {

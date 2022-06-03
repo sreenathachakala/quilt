@@ -4,12 +4,12 @@ import * as R from 'ramda'
 
 import * as s3paths from 'utils/s3paths'
 
-// TODO: use two types: {bucket, name} and {bucket,name,hash}
-//       PackageHandleBase and PackageHandle
-//       or PackageHandle and PackageHandleRevision/PackageHandleRevisioned
-export interface PackageHandle {
+export interface PackageHandleBase {
   bucket: string
   name: string
+}
+
+export interface PackageHandle extends PackageHandleBase {
   hash: string
 }
 
@@ -27,16 +27,21 @@ export function fromS3Handle(s3Handle: s3paths.S3HandleBase): PackageHandle {
   }
 }
 
-export function toS3Handle(packageHandle: PackageHandle): s3paths.S3HandleBase {
-  return {
+export function toS3Handle(
+  packageHandle: PackageHandleBase | PackageHandle,
+): s3paths.S3HandleBase {
+  const s3Handle: s3paths.S3HandleBase = {
     bucket: packageHandle.bucket,
     key: packageHandle.name,
-    version: packageHandle.hash,
   }
+  if ((packageHandle as PackageHandle).hash) {
+    s3Handle.version = (packageHandle as PackageHandle).hash
+  }
+  return s3Handle
 }
 
 // TODO: return null when empty
-export function toS3Url(packageHandle?: PackageHandle): string {
+export function toS3Url(packageHandle?: PackageHandleBase | PackageHandle): string {
   if (!packageHandle) return ''
   return FP.function.pipe(packageHandle, toS3Handle, s3paths.handleToS3Url)
 }
@@ -81,9 +86,17 @@ export function execTemplate(
 }
 
 // TODO: replace with includes
-export function areEqual(a: PackageHandle, b: PackageHandle) {
-  // console.log('areEqual', a, b)
-  // FIXME
-  // return a.bucket === b.bucket && a.name == b.name && a.hash && b.hash
-  return a.bucket === b.bucket && a.name == b.name
+export function areEqual(
+  a: PackageHandleBase | PackageHandle,
+  b: PackageHandleBase | PackageHandle,
+) {
+  if (a.bucket !== b.bucket) return false
+  if (a.name !== b.name) return false
+  if (
+    (a as PackageHandle).hash &&
+    (b as PackageHandle).hash &&
+    (a as PackageHandle).hash !== (b as PackageHandle).hash
+  )
+    return false
+  return true
 }

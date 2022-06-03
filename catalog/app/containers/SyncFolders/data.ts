@@ -2,7 +2,7 @@ import * as R from 'ramda'
 import * as React from 'react'
 
 import * as IPC from 'utils/electron/ipc-provider'
-import { PackageHandle, areEqual } from 'utils/packageHandle'
+import { PackageHandleBase, areEqual } from 'utils/packageHandle'
 
 export interface LocalHandle {
   id?: string
@@ -14,7 +14,7 @@ export interface DataRow {
   id?: string
   local: string
   lastModified?: Date // FIXME: move modified to local field
-  packageHandle: PackageHandle
+  packageHandle: PackageHandleBase
 }
 
 export function useFolders(): [null | DataRow[], () => void] {
@@ -36,7 +36,7 @@ export function useFolders(): [null | DataRow[], () => void] {
 // TODO: getGroup
 export function getLocalHandle(
   groups: DataRow[] | null,
-  packageHandle: PackageHandle,
+  packageHandle: PackageHandleBase,
 ): LocalHandle | null {
   if (!groups) return null
   const foundGroup = groups?.find((group) => areEqual(group.packageHandle, packageHandle))
