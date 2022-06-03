@@ -20,12 +20,12 @@ export default function ConfirmDownloadPackage({
   const [localHandle, setLocalHandle] = React.useState(EMPTY_LOCAL_HANDLE)
   const [resolution, setResolution] = React.useState<boolean | null>(false)
 
-  const handleConfirmRequest = React.useCallback((_event, action, r, handles) => {
+  const handleConfirmRequest = React.useCallback((_event, action, r, syncGroup) => {
     setResolution(r)
     switch (action) {
-      case 'download_package': {
-        setPackageHandle(handles.packageHandle)
-        setLocalHandle(handles.localHandle || EMPTY_LOCAL_HANDLE)
+      case IPC.EVENTS.DOWNLOAD_PACKAGE: {
+        setPackageHandle(syncGroup.packageHandle)
+        setLocalHandle({ path: syncGroup.local, id: syncGroup.id } || EMPTY_LOCAL_HANDLE)
         break
       }
     }

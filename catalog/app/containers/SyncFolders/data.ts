@@ -33,19 +33,11 @@ export function useFolders(): [null | DataRow[], () => void] {
   return [folders, inc]
 }
 
-// TODO: getGroup
-export function getLocalHandle(
+export function getSyncGroup(
   groups: DataRow[] | null,
   packageHandle: PackageHandleBase,
-): LocalHandle | null {
-  if (!groups) return null
-  const foundGroup = groups?.find((group) => areEqual(group.packageHandle, packageHandle))
-  if (!foundGroup) return null
-  return {
-    id: foundGroup.id, // FIXME: this is not id of the local handle
-    lastModified: foundGroup.lastModified,
-    path: foundGroup.local,
-  }
+): DataRow | null {
+  return groups?.find((group) => areEqual(group.packageHandle, packageHandle)) || null
 }
 
 export function useActions() {
