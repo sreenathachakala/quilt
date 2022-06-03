@@ -14,6 +14,7 @@ import Message from 'components/Message'
 import Placeholder from 'components/Placeholder'
 import * as Preview from 'components/Preview'
 import { OpenInDesktop } from 'containers/OpenInDesktop'
+import * as SyncFolders from 'containers/SyncFolders'
 import AsyncResult from 'utils/AsyncResult'
 import * as AWS from 'utils/AWS'
 import * as BucketPreferences from 'utils/BucketPreferences'
@@ -323,13 +324,12 @@ function DirDisplay({
   )
 
   const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
-  const [localFolder, localModified, setLocalFolder] =
-    Download.useLocalFolder(packageHandle)
+  const [localHandle, setLocalFolder] = SyncFolders.useLocalHandle(packageHandle)
 
   const modificationsDiff = React.useMemo(() => {
-    if (!localModified || !lastModified) return 0
-    return localModified.valueOf() - lastModified.valueOf()
-  }, [localModified, lastModified])
+    if (!localHandle?.lastModified || !lastModified) return 0
+    return localHandle?.lastModified.valueOf() - lastModified.valueOf()
+  }, [localHandle?.lastModified, lastModified])
 
   return (
     <>
@@ -370,10 +370,10 @@ function DirDisplay({
       })}
 
       <Download.ConfirmDialog
-        localPath={localFolder}
+        localPath={localHandle?.path || ''}
         onCancel={() => setExpandedLocalFolder(false)}
         onConfirm={() => setExpandedLocalFolder(false)}
-        open={!!localFolder && !!expandedLocalFolder}
+        open={!!localHandle && !!expandedLocalFolder}
         packageHandle={packageHandle}
       />
 
@@ -517,7 +517,7 @@ function DirDisplay({
                 <Download.LocalFolderInput
                   onChange={setLocalFolder}
                   open={expandedLocalFolder}
-                  value={localFolder}
+                  value={localHandle?.path || ''}
                 />
               )}
               {preferences?.ui?.blocks?.meta && (

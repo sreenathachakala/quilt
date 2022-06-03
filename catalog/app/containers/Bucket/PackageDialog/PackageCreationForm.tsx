@@ -10,6 +10,7 @@ import * as M from '@material-ui/core'
 
 import * as Intercom from 'components/Intercom'
 import JsonValidationErrors from 'components/JsonValidationErrors'
+import * as SyncFolders from 'containers/SyncFolders'
 import * as Model from 'model'
 import * as AWS from 'utils/AWS'
 import AsyncResult from 'utils/AsyncResult'
@@ -24,7 +25,6 @@ import * as Types from 'utils/types'
 import * as validators from 'utils/validators'
 import * as workflows from 'utils/workflows'
 
-import * as Download from '../Download'
 import * as Upload from '../Upload'
 import * as requests from '../requests'
 
@@ -386,8 +386,7 @@ function PackageCreationForm({
     () => ({ bucket, name: initial?.name || '', hash: '' }),
     [bucket, initial?.name],
   )
-  // TODO: move useLocalFolder to its own component shared by Download and Upload
-  const [defaultLocalFolder] = Download.useLocalFolder(packageHandle)
+  const [localHandle] = SyncFolders.useLocalHandle(packageHandle)
 
   return (
     <RF.Form
@@ -502,7 +501,7 @@ function PackageCreationForm({
                         [classes.filesWithError]: !!entriesError,
                       })}
                       component={Upload.LocalFolderInput}
-                      initialValue={defaultLocalFolder}
+                      initialValue={localHandle?.path}
                       name="localFolder"
                       title="Local directory"
                       errors={{

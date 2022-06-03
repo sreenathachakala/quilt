@@ -6,7 +6,7 @@ import { PackageHandleBase, areEqual } from 'utils/packageHandle'
 
 export interface LocalHandle {
   id?: string
-  lastModified?: Date // FIXME: move modified to local field
+  lastModified?: Date
   path: string
 }
 
@@ -60,4 +60,28 @@ export function useActions() {
     }),
     [manage, remove],
   )
+}
+
+export function useLocalHandle(
+  packageHandle: PackageHandleBase,
+): [LocalHandle | null, (v: string) => void] {
+  const [folders, inc] = useFolders()
+  const { manage } = useActions()
+  const syncGroup = getSyncGroup(folders, packageHandle)
+
+  const value = React.useMemo(() => syncGroup?.localHandle || null, [syncGroup])
+  const onChange = React.useCallback(
+    async (path: string) => {
+      await manage({
+        id: syncGroup?.id,
+        localHandle: {
+          path,
+        },
+        packageHandle,
+      })
+      inc()
+    },
+    [inc, manage, packageHandle, syncGroup],
+  )
+  return React.useMemo(() => [value, onChange], [value, onChange])
 }

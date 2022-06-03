@@ -3,7 +3,6 @@ import * as React from 'react'
 import * as M from '@material-ui/core'
 
 import Mono from 'components/Code'
-import * as SyncFolders from 'containers/SyncFolders'
 import * as Config from 'utils/Config'
 import * as IPC from 'utils/electron/ipc-provider'
 import * as packageHandleUtils from 'utils/packageHandle'
@@ -167,36 +166,5 @@ export function LocalFolderInput({ onChange, open, value }: LocalFolderInputProp
         value={value}
       />
     </Section>
-  )
-}
-
-export function useLocalFolder(
-  packageHandle: packageHandleUtils.PackageHandle,
-): [string, Date | null, (v: string) => void] {
-  const [folders, inc] = SyncFolders.useFolders()
-  const { manage } = SyncFolders.useActions()
-  const syncGroup = SyncFolders.getSyncGroup(folders, packageHandle)
-
-  const value = React.useMemo(() => syncGroup?.localHandle.path || '', [syncGroup])
-  const localModified = React.useMemo(
-    () => syncGroup?.localHandle.lastModified || null,
-    [syncGroup],
-  )
-  const onChange = React.useCallback(
-    async (path: string) => {
-      await manage({
-        id: syncGroup?.id,
-        localHandle: {
-          path,
-        },
-        packageHandle,
-      })
-      inc()
-    },
-    [inc, manage, packageHandle, syncGroup],
-  )
-  return React.useMemo(
-    () => [value, localModified, onChange],
-    [value, localModified, onChange],
   )
 }
