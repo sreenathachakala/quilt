@@ -26,6 +26,7 @@ export default function OpenInDesktop({
     try {
       const deepLink = PackageUri.stringify(packageHandle, 'teleport')
       window.location.assign(deepLink)
+      onClose()
     } catch (e) {
       if (e instanceof Error) setError(e)
     }
