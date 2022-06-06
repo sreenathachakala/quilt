@@ -97,7 +97,7 @@ export function parse(uri: string): PackageUri {
 
 export function stringify(
   { bucket, name, hash, tag, path }: PackageUri,
-  optSchema?: string,
+  optSchema?: string, // TODO: optonal URI params to merge with
 ) {
   if (!bucket) throw new Error('PackageUri.stringify: missing "bucket"')
   if (!name) throw new Error('PackageUri.stringify: missing "name"')
