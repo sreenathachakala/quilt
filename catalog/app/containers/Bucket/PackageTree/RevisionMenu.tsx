@@ -2,6 +2,7 @@ import * as React from 'react'
 import * as M from '@material-ui/core'
 
 import * as BucketPreferences from 'utils/BucketPreferences'
+import * as Config from 'utils/Config'
 
 interface RevisionMenuProps {
   className: string
@@ -15,6 +16,7 @@ export default function RevisionMenu({
   onDesktop,
 }: RevisionMenuProps) {
   const preferences = BucketPreferences.use()
+  const { desktop }: { desktop: boolean } = Config.use()
   const [anchorEl, setAnchorEl] = React.useState<HTMLElement | null>(null)
 
   const handleOpen = React.useCallback(
@@ -47,8 +49,8 @@ export default function RevisionMenu({
         {preferences?.ui?.actions?.deleteRevision && (
           <M.MenuItem onClick={handleDeleteClick}>Delete revision</M.MenuItem>
         )}
-        {preferences?.ui?.actions?.openInDesktop && (
-          <M.MenuItem onClick={handleDesktopClick}>Open in Desktop</M.MenuItem>
+        {preferences?.ui?.actions?.openInDesktop && !desktop && (
+          <M.MenuItem onClick={handleDesktopClick}>Open in Teleport</M.MenuItem>
         )}
       </M.Menu>
     </>
