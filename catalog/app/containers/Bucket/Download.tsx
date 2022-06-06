@@ -120,21 +120,32 @@ export function ConfirmDialog({
   const handleCancel = React.useCallback(() => onCancel(), [onCancel])
   const handleConfirm = React.useCallback(async () => {
     setSyncing(true)
-    await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, packageHandle, localHandle)
-    onConfirm()
-  }, [ipc, localHandle, onConfirm, packageHandle])
+    try {
+      await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, packageHandle, localHandle)
+      onConfirm()
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log('Download package was unsuccessful', packageHandle, localHandle)
+      // eslint-disable-next-line no-console
+      console.error(error)
+      onCancel()
+    }
+  }, [ipc, localHandle, onCancel, onConfirm, packageHandle])
 
   const [fakeProgress, setFakeProgress] = React.useState(0)
+  const incrementFakeProgress = React.useCallback(() => {
+    setFakeProgress((100 - fakeProgress) * 0.1 + fakeProgress)
+  }, [fakeProgress])
   const handleCliOutput = React.useCallback(() => {
     if (fakeProgress) {
-      setFakeProgress((100 - fakeProgress) * 0.1 + fakeProgress)
+      incrementFakeProgress()
     } else {
       setFakeProgress(1)
       setTimeout(() => {
-        setFakeProgress((100 - fakeProgress) * 0.1 + fakeProgress)
+        incrementFakeProgress()
       }, 300)
     }
-  }, [fakeProgress, setFakeProgress])
+  }, [fakeProgress, incrementFakeProgress, setFakeProgress])
   React.useEffect(() => {
     ipc.on(IPC.EVENTS.CLI_OUTPUT, handleCliOutput)
     return () => {
@@ -192,9 +203,16 @@ export function LocalFolderInput({ onChange, open, value }: LocalFolderInputProp
   const ipc = IPC.use()
 
   const handleClick = React.useCallback(async () => {
-    const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
-    if (!newLocalPath) return
-    onChange(newLocalPath)
+    try {
+      const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
+      if (!newLocalPath) return
+      onChange(newLocalPath)
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log('Couldnt get local path')
+      // eslint-disable-next-line no-console
+      console.error(error)
+    }
   }, [ipc, onChange])
 
   return (

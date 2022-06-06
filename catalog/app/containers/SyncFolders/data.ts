@@ -23,8 +23,15 @@ export function useFolders(): [null | SyncGroup[], () => void] {
   const [folders, setFolders] = React.useState<null | SyncGroup[]>(null)
   React.useEffect(() => {
     async function fetchData() {
-      const foldersList = await ipc.invoke(IPC.EVENTS.SYNC_FOLDERS_LIST)
-      setFolders(foldersList)
+      try {
+        const foldersList = await ipc.invoke(IPC.EVENTS.SYNC_FOLDERS_LIST)
+        setFolders(foldersList)
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log('Couldnt get syncing folder groups')
+        // eslint-disable-next-line no-console
+        console.log(error)
+      }
     }
 
     fetchData()
@@ -72,14 +79,21 @@ export function useLocalHandle(
   const value = React.useMemo(() => syncGroup?.localHandle || null, [syncGroup])
   const onChange = React.useCallback(
     async (path: string) => {
-      await manage({
-        id: syncGroup?.id,
-        localHandle: {
-          path,
-        },
-        packageHandle,
-      })
-      inc()
+      try {
+        await manage({
+          id: syncGroup?.id,
+          localHandle: {
+            path,
+          },
+          packageHandle,
+        })
+        inc()
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log('Couldnt update local handle')
+        // eslint-disable-next-line no-console
+        console.error(error)
+      }
     },
     [inc, manage, packageHandle, syncGroup],
   )

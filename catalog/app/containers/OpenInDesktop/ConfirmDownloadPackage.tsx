@@ -53,10 +53,17 @@ export default function ConfirmDownloadPackage({
   }, [folders, packageHandle])
   const handleChangeLocalFolder = React.useCallback(
     async (row: SyncFolders.SyncGroup) => {
-      await manage(row)
+      try {
+        await manage(row)
 
-      setLocalHandle(row.localHandle || EMPTY_LOCAL_HANDLE)
-      setLocalEditing(null)
+        setLocalHandle(row.localHandle || EMPTY_LOCAL_HANDLE)
+        setLocalEditing(null)
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log('Couldnt update local handle')
+        // eslint-disable-next-line no-console
+        console.error(error)
+      }
     },
     [manage],
   )

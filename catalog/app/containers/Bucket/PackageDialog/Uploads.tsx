@@ -98,6 +98,10 @@ async function uploadFileUsingCLI(
     )
     return result
   } catch (e) {
+    // eslint-disable-next-line no-console
+    console.log('Coulndt upload package')
+    // eslint-disable-next-line no-console
+    console.error(e)
     abortController.abort()
     throw e
   }

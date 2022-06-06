@@ -117,9 +117,16 @@ export default function StackHost({ children, onChange, onConfig, ipc }: StackHo
 
   React.useEffect(() => {
     const loadData = async () => {
-      const config = await ipc.invoke(EVENTS.CONFIG_GET)
-      setHasConfig(true)
-      onConfig(JSON.parse(config))
+      try {
+        const config = await ipc.invoke(EVENTS.CONFIG_GET)
+        setHasConfig(true)
+        onConfig(JSON.parse(config))
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log('Couldnt get config')
+        // eslint-disable-next-line no-console
+        console.log(error)
+      }
     }
     loadData()
   }, [ipc, onConfig])

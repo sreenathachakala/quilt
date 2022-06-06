@@ -30,7 +30,7 @@ export default function OpenInDesktop({
     } catch (e) {
       if (e instanceof Error) setError(e)
     }
-  }, [packageHandle])
+  }, [onClose, packageHandle])
 
   return (
     <M.Dialog open={open} onClose={onClose}>
