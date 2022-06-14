@@ -3,101 +3,32 @@ import * as M from '@material-ui/core'
 
 import * as SyncFolders from 'containers/SyncFolders'
 import MetaTitle from 'utils/MetaTitle'
-import * as NamedRoutes from 'utils/NamedRoutes'
-import StyledLink from 'utils/StyledLink'
-import { PackageHandleBase, toS3Url } from 'utils/packageHandle'
+import * as IPC from 'utils/electron/ipc-provider'
 
-import * as Table from './Table'
-
-interface ConfirmDeletionDialogProps {
-  onCancel: () => void
-  onSubmit: (v: SyncFolders.SyncGroup) => void
-  value: SyncFolders.SyncGroup | null
+type LocalFolderInputProps = M.TextFieldProps & {
+  input: {
+    value: string
+    onChange: (value: string) => void
+  }
 }
 
-function ConfirmDeletionDialog({
-  onCancel,
-  onSubmit,
-  value,
-}: ConfirmDeletionDialogProps) {
-  const handleSubmit = React.useCallback(() => {
-    if (value) onSubmit(value)
-  }, [onSubmit, value])
+function LocalFolderInput({ input, ...props }: LocalFolderInputProps) {
+  const ipc = IPC.use()
+
+  const handleClick = React.useCallback(async () => {
+    const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
+    if (!newLocalPath) return
+    input.onChange(newLocalPath)
+  }, [ipc, input.onChange])
+
   return (
-    <M.Dialog open={!!value}>
-      <M.DialogTitle>Remove local ⇄ s3 folder pair</M.DialogTitle>
-      <M.DialogContent>
-        Confirm deletion of {value?.localHandle.path}⇄{toS3Url(value?.packageHandle)} sync
-        pair
-      </M.DialogContent>
-      <M.DialogActions>
-        <M.Button onClick={onCancel} color="primary">
-          Cancel
-        </M.Button>
-        <M.Button color="primary" onClick={handleSubmit} variant="contained">
-          Remove
-        </M.Button>
-      </M.DialogActions>
-    </M.Dialog>
-  )
-}
-
-const useTableRowStyles = M.makeStyles({
-  action: {
-    opacity: 0.3,
-    'tr:hover &': {
-      opacity: 1,
-    },
-  },
-})
-
-interface PackageLinkProps {
-  packageHandle: PackageHandleBase
-}
-
-function PackageLink({ packageHandle }: PackageLinkProps) {
-  const { urls } = NamedRoutes.use()
-  const { name, bucket } = packageHandle
-  return (
-    <StyledLink to={urls.bucketPackageDetail(bucket, name)}>
-      {toS3Url(packageHandle)}
-    </StyledLink>
-  )
-}
-
-interface TableRowProps {
-  onEdit: (v: SyncFolders.SyncGroup) => void
-  onRemove: (v: SyncFolders.SyncGroup) => void
-  row: SyncFolders.SyncGroup
-}
-
-function TableRow({ onEdit, onRemove, row }: TableRowProps) {
-  const classes = useTableRowStyles()
-  const handleRemove = React.useCallback(() => onRemove(row), [onRemove, row])
-  const handleEdit = React.useCallback(() => onEdit(row), [onEdit, row])
-  return (
-    <M.TableRow hover>
-      <M.TableCell>{row.localHandle.path}</M.TableCell>
-      <M.TableCell>
-        <PackageLink packageHandle={row.packageHandle} />
-      </M.TableCell>
-      <M.TableCell align="right">
-        <M.Tooltip title="Remove">
-          <M.IconButton
-            className={classes.action}
-            aria-label="Remove"
-            onClick={handleRemove}
-          >
-            <M.Icon>delete</M.Icon>
-          </M.IconButton>
-        </M.Tooltip>
-        <M.Tooltip title="Edit">
-          <M.IconButton className={classes.action} aria-label="Edit" onClick={handleEdit}>
-            <M.Icon>edit</M.Icon>
-          </M.IconButton>
-        </M.Tooltip>
-      </M.TableCell>
-    </M.TableRow>
+    <M.TextField
+      onClick={handleClick}
+      placeholder="~/Quilt"
+      size="small"
+      value={input.value}
+      {...props}
+    />
   )
 }
 
@@ -105,96 +36,52 @@ const useStyles = M.makeStyles((t) => ({
   root: {
     padding: t.spacing(2, 0, 0),
   },
+  content: {
+    padding: t.spacing(2),
+  },
+  title: {
+    margin: t.spacing(0, 0, 2),
+    padding: t.spacing(0, 2),
+  },
+  input: {
+    width: '100%',
+  },
 }))
 
 export default function Sync() {
   const classes = useStyles()
 
-  const [selected, setSelected] = React.useState<Partial<SyncFolders.SyncGroup> | null>(
-    null,
-  )
-  const [removing, setRemoving] = React.useState<SyncFolders.SyncGroup | null>(null)
-
-  const [folders, inc] = SyncFolders.useFolders()
-  const { remove, manage } = SyncFolders.useActions()
-
-  const toolbarActions = React.useMemo(
-    () =>
-      folders
-        ? [
-            {
-              title: 'Add local ⇄ s3 folder pair',
-              icon: <M.Icon>add</M.Icon>,
-              fn: () => {
-                setSelected({})
-              },
-            },
-          ]
-        : [],
-    [folders],
-  )
-
-  const handleRemove = React.useCallback(
-    async (row: SyncFolders.SyncGroup) => {
-      await remove(row)
-
-      setRemoving(null)
-      inc()
-    },
-    [inc, remove],
-  )
+  const [root, inc] = SyncFolders.useRoot()
+  const { changeRoot } = SyncFolders.useActions()
 
   const handleEdit = React.useCallback(
-    async (row: SyncFolders.SyncGroup) => {
-      await manage(row)
-
-      setSelected(null)
+    async (path: string) => {
+      await changeRoot({ path })
       inc()
     },
-    [inc, manage],
+    [inc, changeRoot],
+  )
+
+  const inputProps = React.useMemo(
+    () => ({
+      onChange: handleEdit,
+      value: root?.path || '',
+    }),
+    [handleEdit, root?.path],
   )
 
   return (
     <div className={classes.root}>
       <MetaTitle>{['Sync Folders', 'Admin']}</MetaTitle>
 
-      <SyncFolders.ManageSyncFoldersPair
-        onCancel={() => setSelected(null)}
-        onSubmit={handleEdit}
-        value={selected}
-      />
+      <M.Typography variant="h4" className={classes.title}>
+        Teleport settings
+      </M.Typography>
 
-      <ConfirmDeletionDialog
-        onCancel={() => setRemoving(null)}
-        onSubmit={handleRemove}
-        value={removing}
-      />
+      <M.Paper className={classes.content}>
+        <M.Typography variant="h6">Local root directory</M.Typography>
 
-      <M.Paper>
-        <Table.Toolbar heading="Sync folders" actions={toolbarActions} />
-        {folders ? (
-          <M.Table size="small">
-            <M.TableHead>
-              <M.TableRow>
-                <M.TableCell>Local folder</M.TableCell>
-                <M.TableCell>S3 folder</M.TableCell>
-                <M.TableCell align="right">Actions</M.TableCell>
-              </M.TableRow>
-            </M.TableHead>
-            <M.TableBody>
-              {folders.map((row) => (
-                <TableRow
-                  key={row.id}
-                  onEdit={setSelected}
-                  onRemove={setRemoving}
-                  row={row}
-                />
-              ))}
-            </M.TableBody>
-          </M.Table>
-        ) : (
-          <Table.Progress />
-        )}
+        <LocalFolderInput className={classes.input} input={inputProps} />
       </M.Paper>
     </div>
   )
