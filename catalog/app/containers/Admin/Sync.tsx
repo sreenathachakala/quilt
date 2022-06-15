@@ -15,18 +15,20 @@ type LocalFolderInputProps = M.TextFieldProps & {
 function LocalFolderInput({ input, ...props }: LocalFolderInputProps) {
   const ipc = IPC.use()
 
+  const { onChange, value } = input
+
   const handleClick = React.useCallback(async () => {
     const newLocalPath = await ipc.invoke(IPC.EVENTS.LOCALPATH_REQUEST)
     if (!newLocalPath) return
-    input.onChange(newLocalPath)
-  }, [ipc, input.onChange])
+    onChange(newLocalPath)
+  }, [ipc, onChange])
 
   return (
     <M.TextField
       onClick={handleClick}
       placeholder="~/Quilt"
       size="small"
-      value={input.value}
+      value={value}
       {...props}
     />
   )
