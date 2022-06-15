@@ -84,19 +84,3 @@ export function execTemplate(
   if (!templatesDict || !templatesDict[context]) return null
   return execTemplateItem(templatesDict[context] || '', options)
 }
-
-// TODO: replace with includes
-export function areEqual(
-  a: PackageHandleBase | PackageHandle,
-  b: PackageHandleBase | PackageHandle,
-) {
-  if (a.bucket !== b.bucket) return false
-  if (a.name !== b.name) return false
-  if (
-    (a as PackageHandle).hash &&
-    (b as PackageHandle).hash &&
-    (a as PackageHandle).hash !== (b as PackageHandle).hash
-  )
-    return false
-  return true
-}

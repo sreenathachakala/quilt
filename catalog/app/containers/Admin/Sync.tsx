@@ -53,15 +53,11 @@ const useStyles = M.makeStyles((t) => ({
 export default function Sync() {
   const classes = useStyles()
 
-  const [root, inc] = SyncFolders.useRoot()
-  const { changeRoot } = SyncFolders.useActions()
+  const [root, changeRoot] = SyncFolders.useRoot()
 
   const handleEdit = React.useCallback(
-    async (path: string) => {
-      await changeRoot({ path })
-      inc()
-    },
-    [inc, changeRoot],
+    (path: string) => changeRoot({ path }),
+    [changeRoot],
   )
 
   const inputProps = React.useMemo(
