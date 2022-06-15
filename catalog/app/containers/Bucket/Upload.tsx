@@ -3,6 +3,7 @@ import { basename } from 'path'
 import * as React from 'react'
 import { DropEvent, useDropzone } from 'react-dropzone'
 import type * as RF from 'react-final-form'
+import * as M from '@material-ui/core'
 
 import { JsonValue } from 'components/JsonEditor/constants'
 
@@ -71,6 +72,12 @@ interface LocalFolderInputProps {
   title: React.ReactNode
 }
 
+const useLocalFolderInputStyles = M.makeStyles({
+  dir: {
+    cursor: 'default',
+  },
+})
+
 export function LocalFolderInput({
   className,
   disabled = false,
@@ -80,6 +87,7 @@ export function LocalFolderInput({
   title,
 }: LocalFolderInputProps) {
   const ipc = IPC.use()
+  const classes = useLocalFolderInputStyles()
 
   const submitting = meta.submitting || meta.submitSucceeded
   const error = meta.submitFailed && meta.error
@@ -124,9 +132,10 @@ export function LocalFolderInput({
           error={!!error}
         >
           <FI.FilesContainer error={!!error} noBorder>
-            {value && <FI.Dir name={basename(value)} />}
+            {value && <FI.Dir className={classes.dir} name={basename(value)} />}
           </FI.FilesContainer>
           <FI.DropzoneMessage
+            className={classes.dir}
             label="Drop directory or click to browse"
             error={error && (errors[error] || error)}
             warn={{ upload: false, s3: false, count: false }}

@@ -501,6 +501,7 @@ function PackageCreationForm({
                         [classes.filesWithError]: !!entriesError,
                       })}
                       component={Upload.LocalFolderInput}
+                      disabled
                       initialValue={localHandle?.path}
                       name="localFolder"
                       title="Local directory"

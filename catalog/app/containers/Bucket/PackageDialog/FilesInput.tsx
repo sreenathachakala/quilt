@@ -714,12 +714,14 @@ const useDropzoneMessageStyles = M.makeStyles((t) => ({
 }))
 
 interface DropzoneMessageProps {
+  className?: string
   label?: React.ReactNode
   error: React.ReactNode
   warn: { upload: boolean; s3: boolean; count: boolean }
 }
 
 export function DropzoneMessage({
+  className,
   label: defaultLabel,
   error,
   warn,
@@ -754,10 +756,14 @@ export function DropzoneMessage({
 
   return (
     <div
-      className={cx(classes.root, {
-        [classes.error]: error,
-        [classes.warning]: !error && (warn.upload || warn.s3 || warn.count),
-      })}
+      className={cx(
+        classes.root,
+        {
+          [classes.error]: error,
+          [classes.warning]: !error && (warn.upload || warn.s3 || warn.count),
+        },
+        className,
+      )}
     >
       {label}
     </div>
