@@ -105,31 +105,25 @@ export function useActions() {
 
 export function useLocalHandle(
   packageHandle: PackageHandleBase,
-): [LocalHandle | null, (v: string) => void] {
-  const [folders, inc] = useFolders()
-  const { manage } = useActions()
-  const syncGroup = getSyncGroup(folders, packageHandle)
-
-  const value = React.useMemo(() => syncGroup?.localHandle || null, [syncGroup])
-  const onChange = React.useCallback(
-    async (path: string) => {
+): [LocalHandle | null, () => void] {
+  const ipc = IPC.use()
+  const [key, setKey] = React.useState(1)
+  const inc = React.useCallback(() => setKey(R.inc), [setKey])
+  const [localHandle, setLocalHandle] = React.useState<null | LocalHandle>(null)
+  React.useEffect(() => {
+    async function fetchData() {
       try {
-        await manage({
-          id: syncGroup?.id,
-          localHandle: {
-            path,
-          },
-          packageHandle,
-        })
-        inc()
+        const data = await ipc.invoke(IPC.EVENTS.SYNC_LOCAL_HANDLE, packageHandle)
+        setLocalHandle(data)
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.log('Couldnt update local handle')
+        console.log('Couldnt get syncing folder groups')
         // eslint-disable-next-line no-console
-        console.error(error)
+        console.log(error)
       }
-    },
-    [inc, manage, packageHandle, syncGroup],
-  )
-  return React.useMemo(() => [value, onChange], [value, onChange])
+    }
+
+    fetchData()
+  }, [ipc, key, packageHandle])
+  return [localHandle, inc]
 }

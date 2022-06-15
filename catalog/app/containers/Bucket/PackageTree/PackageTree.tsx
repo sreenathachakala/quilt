@@ -230,7 +230,6 @@ function DirDisplay({
   lastModified,
   size,
 }: DirDisplayProps) {
-  const { desktop } = Config.use()
   const history = RRDom.useHistory()
   const { urls } = NamedRoutes.use()
   const classes = useDirDisplayStyles()
@@ -323,8 +322,7 @@ function DirDisplay({
     [bucket, name, hash],
   )
 
-  const [expandedLocalFolder, setExpandedLocalFolder] = React.useState(false)
-  const [localHandle, setLocalFolder] = SyncFolders.useLocalHandle(packageHandle)
+  const [localHandle] = SyncFolders.useLocalHandle(packageHandle)
 
   const modificationsDiff = React.useMemo(() => {
     if (!localHandle?.lastModified || !lastModified) return 0
@@ -368,14 +366,6 @@ function DirDisplay({
         ),
         title: 'Push package revision',
       })}
-
-      <Download.ConfirmDialog
-        localHandle={localHandle}
-        onCancel={() => setExpandedLocalFolder(false)}
-        onConfirm={() => setExpandedLocalFolder(false)}
-        open={!!localHandle && !!expandedLocalFolder}
-        packageHandle={packageHandle}
-      />
 
       {dirQuery.case({
         // TODO: skeleton placeholder
@@ -498,7 +488,7 @@ function DirDisplay({
                   <Download.DownloadButton
                     className={classes.button}
                     label={path ? 'Download sub-package' : 'Download package'}
-                    onClick={() => setExpandedLocalFolder(true)}
+                    onClick={confirmDesktop}
                     path={downloadPath}
                   />
                 </ActionAvailable>
@@ -512,13 +502,6 @@ function DirDisplay({
               </TopBar>
               {preferences?.ui?.blocks?.code && (
                 <PkgCode {...{ ...packageHandle, hashOrTag, path }} />
-              )}
-              {desktop && (
-                <Download.LocalFolderInput
-                  onChange={setLocalFolder}
-                  open={expandedLocalFolder}
-                  value={localHandle?.path || ''}
-                />
               )}
               {preferences?.ui?.blocks?.meta && (
                 <FileView.Meta data={AsyncResult.Ok(dir.metadata)} />
