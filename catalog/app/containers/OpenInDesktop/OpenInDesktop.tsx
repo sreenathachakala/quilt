@@ -2,6 +2,8 @@ import * as React from 'react'
 import * as M from '@material-ui/core'
 import * as Lab from '@material-ui/lab'
 
+import * as IPC from 'utils/electron/ipc-provider'
+import * as Config from 'utils/Config'
 import * as PackageUri from 'utils/PackageUri'
 import { PackageHandle } from 'utils/packageHandle'
 import { readableBytes } from 'utils/string'
@@ -22,15 +24,23 @@ export default function OpenInDesktop({
   size,
 }: OpenInDesktopProps) {
   const [error, setError] = React.useState<Error | null>(null)
-  const handleConfirm = React.useCallback(() => {
+  const { desktop } = Config.use()
+  const ipc = IPC.use()
+  const handleConfirm = React.useCallback(async () => {
     try {
-      const deepLink = PackageUri.stringify(packageHandle, 'teleport')
-      window.location.assign(deepLink)
+      if (desktop) {
+        // TODO: disable confirm
+        await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, packageHandle)
+        // TODO: enable confirm
+      } else {
+        const deepLink = PackageUri.stringify(packageHandle, 'teleport')
+        window.location.assign(deepLink)
+      }
       onClose()
     } catch (e) {
       if (e instanceof Error) setError(e)
     }
-  }, [onClose, packageHandle])
+  }, [ipc, onClose, packageHandle])
 
   return (
     <M.Dialog open={open} onClose={onClose}>
