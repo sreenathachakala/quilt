@@ -231,6 +231,7 @@ function DirDisplay({
   size,
 }: DirDisplayProps) {
   const history = RRDom.useHistory()
+  const { desktop } = Config.use()
   const { urls } = NamedRoutes.use()
   const classes = useDirDisplayStyles()
 
@@ -446,6 +447,8 @@ function DirDisplay({
           const hasRevisionMenu =
             preferences?.ui?.actions?.deleteRevision ||
             preferences?.ui?.actions?.openInDesktop
+          const hasReviseButton =
+            preferences?.ui?.actions?.revisePackage && (desktop ? localHandle : true)
           return (
             <>
               <TopBar crumbs={crumbs}>
@@ -454,7 +457,7 @@ function DirDisplay({
                   lastModified={lastModified}
                   size={size}
                 />
-                {preferences?.ui?.actions?.revisePackage && (
+                {hasReviseButton && (
                   <ActionAvailable
                     active={modificationsDiff > 0}
                     title="Your local folder is ahead of remote package"
