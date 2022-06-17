@@ -218,6 +218,7 @@ interface DirDisplayProps {
   crumbs: $TSFixMe[] // Crumb
   lastModified?: Date
   size?: number
+  actions: Action[]
 }
 
 function DirDisplay({
@@ -229,9 +230,11 @@ function DirDisplay({
   crumbs,
   lastModified,
   size,
+  actions,
 }: DirDisplayProps) {
-  const history = RRDom.useHistory()
   const { desktop } = Config.use()
+  const history = RRDom.useHistory()
+  const location = RRDom.useLocation()
   const { urls } = NamedRoutes.use()
   const classes = useDirDisplayStyles()
 
@@ -245,7 +248,24 @@ function DirDisplay({
     [urls, bucket, name, hashOrTag],
   )
 
+  const [initialOpen] = React.useState(actions.includes('revisePackage'))
+  const clearActions = React.useCallback(
+    (searchParams) => {
+      searchParams.delete('action')
+      history.replace({
+        search: searchParams.toString(),
+      })
+    },
+    [history],
+  )
+  React.useEffect(() => {
+    const searchParams = new URLSearchParams(location.search)
+    if (!searchParams.has('action')) return
+    clearActions(searchParams)
+  }, [clearActions, location.search])
+
   const updateDialog = PD.usePackageCreationDialog({
+    initialOpen,
     bucket,
     src: { name, hash },
   })
@@ -782,6 +802,7 @@ interface PackageTreeProps {
   revisionListQuery: UseQueryResult<ResultOf<typeof REVISION_LIST_QUERY>>
   lastModified?: Date
   size?: number
+  actions: Action[]
 }
 
 function PackageTree({
@@ -795,6 +816,7 @@ function PackageTree({
   revisionListQuery,
   lastModified,
   size,
+  actions,
 }: PackageTreeProps) {
   const classes = useStyles()
   const { urls } = NamedRoutes.use()
@@ -882,6 +904,7 @@ function PackageTree({
                 crumbs,
                 lastModified,
                 size,
+                actions,
               }}
             />
           ) : (
@@ -917,6 +940,7 @@ interface PackageTreeQueriesProps {
   path: string
   resolvedFrom?: string
   mode?: string
+  actions: Action[]
 }
 
 function PackageTreeQueries({
@@ -926,6 +950,7 @@ function PackageTreeQueries({
   path,
   resolvedFrom,
   mode,
+  actions,
 }: PackageTreeQueriesProps) {
   const revisionQuery = useQuery({
     query: REVISION_QUERY,
@@ -964,6 +989,7 @@ function PackageTreeQueries({
             mode,
             resolvedFrom,
             revisionListQuery,
+            actions,
           }}
         />
       )
@@ -978,6 +1004,9 @@ interface PackageTreeRouteParams {
   path?: string
 }
 
+// TODO: use the same action names as for UI Preferences
+type Action = 'revisePackage'
+
 export default function PackageTreeWrapper({
   match: {
     params: { bucket, name, revision: hashOrTag = 'latest', path: encodedPath = '' },
@@ -985,12 +1014,18 @@ export default function PackageTreeWrapper({
   location,
 }: RRDom.RouteComponentProps<PackageTreeRouteParams>) {
   const path = s3paths.decode(encodedPath)
-  const { resolvedFrom, mode } = parseSearch(location.search, true)
+  const params = new URLSearchParams(location.search)
+  const resolvedFrom = params.get('resolvedFrom') || undefined
+  // TODO: mode is "switch view mode" action, ex. mode=json, or type=json, or type=application/json
+  const mode = params.get('mode') || undefined
+  const actions = params.getAll('action') as Action[]
   return (
     <>
       <MetaTitle>{[`${name}@${R.take(10, hashOrTag)}/${path}`, bucket]}</MetaTitle>
       <WithPackagesSupport bucket={bucket}>
-        <PackageTreeQueries {...{ bucket, name, hashOrTag, path, resolvedFrom, mode }} />
+        <PackageTreeQueries
+          {...{ bucket, name, hashOrTag, path, resolvedFrom, mode, actions }}
+        />
       </WithPackagesSupport>
     </>
   )

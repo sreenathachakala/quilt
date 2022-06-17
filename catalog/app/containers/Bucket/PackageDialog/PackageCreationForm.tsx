@@ -621,6 +621,7 @@ interface UsePackageCreationDialogProps {
     name: string
     hash?: string
   }
+  initialOpen?: boolean
   delayHashing?: boolean
   disableStateDisplay?: boolean
 }
@@ -628,10 +629,11 @@ interface UsePackageCreationDialogProps {
 export function usePackageCreationDialog({
   bucket,
   src,
+  initialOpen,
   delayHashing = false,
   disableStateDisplay = false,
 }: UsePackageCreationDialogProps) {
-  const [isOpen, setOpen] = React.useState(false)
+  const [isOpen, setOpen] = React.useState(initialOpen || false)
   const [exited, setExited] = React.useState(!isOpen)
   const [success, setSuccess] = React.useState<PackageCreationSuccess | false>(false)
   const [submitting, setSubmitting] = React.useState(false)
