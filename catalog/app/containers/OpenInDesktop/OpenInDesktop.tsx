@@ -23,15 +23,16 @@ export default function OpenInDesktop({
   packageHandle,
   size,
 }: OpenInDesktopProps) {
-  const [error, setError] = React.useState<Error | null>(null)
   const { desktop } = Config.use()
   const ipc = IPC.use()
+  const [error, setError] = React.useState<Error | null>(null)
+  const [disabled, setDisabled] = React.useState(false)
   const handleConfirm = React.useCallback(async () => {
     try {
       if (desktop) {
-        // TODO: disable confirm
+        setDisabled(true)
         await ipc.invoke(IPC.EVENTS.DOWNLOAD_PACKAGE, packageHandle)
-        // TODO: enable confirm
+        setDisabled(false)
       } else {
         const deepLink = PackageUri.stringify(packageHandle, 'teleport')
         window.location.assign(deepLink)
@@ -55,7 +56,12 @@ export default function OpenInDesktop({
       </M.DialogContent>
       <M.DialogActions>
         <M.Button onClick={onClose}>Cancel</M.Button>
-        <M.Button color="primary" onClick={handleConfirm} variant="contained">
+        <M.Button
+          color="primary"
+          disabled={disabled}
+          onClick={handleConfirm}
+          variant="contained"
+        >
           Confirm
         </M.Button>
       </M.DialogActions>
