@@ -228,16 +228,16 @@ def read_file_chunks(file, chunksize=s3_transfer_config.io_chunksize):
 UPLOAD_ETAG_OPTIMIZATION_THRESHOLD = 1024
 
 
-# 8MB - same as TransferConfig().multipart_threshold - but hard-coded to guarantee it won't change.
+# 8 MiB - same as TransferConfig().multipart_threshold - but hard-coded to guarantee it won't change.
 CHECKSUM_MULTIPART_THRESHOLD = 8 * 1024 * 1024
 
 # Maximum number of parts supported by S3
 CHECKSUM_MAX_PARTS = 10_000
 
 
-def adjust_checksum_chunksize(file_size):
+def get_checksum_chunksize(file_size: int) -> int:
     """
-    Calculate the chunk size to be used for the checksum. It is normally 8MB,
+    Calculate the chunk size to be used for the checksum. It is normally 8 MiB,
     but gets doubled as long as the number of parts exceeds the maximum of 10,000.
 
     It is the same as
@@ -247,7 +247,7 @@ def adjust_checksum_chunksize(file_size):
     assert file_size >= CHECKSUM_MULTIPART_THRESHOLD, "file_size too small for multi-part"
 
     chunksize = 8 * 1024 * 1024
-    num_parts = int(math.ceil(file_size / float(chunksize)))
+    num_parts = math.ceil(file_size / chunksize)
 
     while num_parts > CHECKSUM_MAX_PARTS:
         chunksize *= 2
@@ -290,7 +290,7 @@ def _upload_file(ctx, size, src_path, dest_bucket, dest_key):
         )
         upload_id = resp['UploadId']
 
-        chunksize = adjust_checksum_chunksize(size)
+        chunksize = get_checksum_chunksize(size)
 
         chunk_offsets = list(range(0, size, chunksize))
 
@@ -444,7 +444,7 @@ def _copy_remote_file(ctx, size, src_bucket, src_key, src_version,
         )
         upload_id = resp['UploadId']
 
-        chunksize = adjust_checksum_chunksize(size)
+        chunksize = get_checksum_chunksize(size)
 
         chunk_offsets = list(range(0, size, chunksize))
 
@@ -999,7 +999,7 @@ def _calculate_sha256_internal(src_list, sizes, results):
                 future = executor.submit(_process_url_part, src, 0, size)
                 futures.append((False, [future]))
             else:
-                chunksize = adjust_checksum_chunksize(size)
+                chunksize = get_checksum_chunksize(size)
 
                 src_future_list = []
                 for start in range(0, size, chunksize):
@@ -1036,7 +1036,7 @@ def calculate_sha256_bytes(data: bytes):
     if size < CHECKSUM_MULTIPART_THRESHOLD:
         result = base64.b64encode(hashlib.sha256(data).digest()).decode()
     else:
-        chunksize = adjust_checksum_chunksize(size)
+        chunksize = get_checksum_chunksize(size)
 
         hashes = []
         for start in range(0, size, chunksize):

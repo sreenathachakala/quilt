@@ -690,13 +690,13 @@ class S3HashingTest(QuiltTestCase):
         default = 8 * 1024 * 1024
 
         # "Normal" file sizes
-        assert data_transfer.adjust_checksum_chunksize(8 * 1024 * 1024) == default
-        assert data_transfer.adjust_checksum_chunksize(1024 * 1024 * 1024) == default
-        assert data_transfer.adjust_checksum_chunksize(10_000 * default) == default
+        assert data_transfer.get_checksum_chunksize(8 * 1024 * 1024) == default
+        assert data_transfer.get_checksum_chunksize(1024 * 1024 * 1024) == default
+        assert data_transfer.get_checksum_chunksize(10_000 * default) == default
 
         # Big file: exceeds 10,000 parts
-        assert data_transfer.adjust_checksum_chunksize(10_000 * default + 1) == default * 2
-        assert data_transfer.adjust_checksum_chunksize(2 * 10_000 * default + 1) == default * 4
+        assert data_transfer.get_checksum_chunksize(10_000 * default + 1) == default * 2
+        assert data_transfer.get_checksum_chunksize(2 * 10_000 * default + 1) == default * 4
 
     def test_single(self):
         data = b'0123456789abcdef'
