@@ -19,6 +19,7 @@ export interface PackageUri {
   path?: string
   hash?: string
   tag?: string
+  action?: string
 }
 
 function parsePackageSpec(spec: string, uri: string) {
@@ -73,13 +74,18 @@ export function parse(uri: string): PackageUri {
   if (!url.slashes) {
     throw new PackageUriError('missing slashes between protocol and registry.', uri)
   }
-  if (url.path) {
-    throw new PackageUriError(
-      'non-bucket-root registries are not supported currently.',
-      uri,
-    )
-  }
+  // if (url.path) {
+  //   throw new PackageUriError(
+  //     'non-bucket-root registries are not supported currently.',
+  //     uri,
+  //   )
+  // }
   const bucket = url.host
+  const search = url.search
+  let action = undefined
+  if (search) {
+    action = 'revisePackage'
+  }
   const params = parseQs((url.hash || '').replace('#', ''))
   if (!params.package) {
     throw new PackageUriError('missing "package=" part.', uri)
@@ -92,7 +98,14 @@ export function parse(uri: string): PackageUri {
     throw new PackageUriError('"path=" specified multiple times.', uri)
   }
   const path = params.path ? decodeURIComponent(params.path) : undefined
-  return R.reject(R.isNil, { bucket, name, hash, tag, path }) as unknown as PackageUri
+  return R.reject(R.isNil, {
+    bucket,
+    name,
+    hash,
+    tag,
+    path,
+    action,
+  }) as unknown as PackageUri
 }
 
 export function stringify(
