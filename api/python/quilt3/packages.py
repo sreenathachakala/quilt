@@ -30,6 +30,7 @@ from .data_transfer import (
     copy_file_list,
     get_bytes,
     get_size_and_version,
+    legacy_calculate_sha256,
     list_object_versions,
     list_url,
     put_bytes,
@@ -68,6 +69,7 @@ if MANIFEST_MAX_RECORD_SIZE is None:
 
 
 HASH_NAME = 'AWSChecksumSHA256'
+LEGACY_HASH_NAME = 'SHA256'
 
 
 def _fix_docstring(**kwargs):
@@ -200,7 +202,7 @@ class PackageEntry:
         """
         if self.hash is None:
             raise QuiltException("Hash missing - need to build the package")
-        if self.hash.get('type') == 'SHA256':
+        if self.hash.get('type') == LEGACY_HASH_NAME:
             digest = hashlib.sha256(read_bytes).hexdigest()
         elif self.hash.get('type') == HASH_NAME:
             digest = calculate_sha256_bytes(read_bytes)
@@ -1635,8 +1637,15 @@ class Package:
         """
         src = PhysicalKey.from_url(fix_url(src))
         src_dict = dict(list_url(src))
+
+        expected_hash_list = []
         url_list = []
         size_list = []
+
+        legacy_expected_hash_list = []
+        legacy_url_list = []
+        legacy_size_list = []
+
         for logical_key, entry in self.walk():
             src_size = src_dict.pop(logical_key, None)
             if src_size is None:
@@ -1644,17 +1653,32 @@ class Package:
             if entry.size != src_size:
                 return False
             entry_url = src.join(logical_key)
-            url_list.append(entry_url)
-            size_list.append(src_size)
+            if entry.hash['type'] == HASH_NAME:
+                expected_hash_list.append(entry.hash['value'])
+                url_list.append(entry_url)
+                size_list.append(src_size)
+            elif entry.hash['type'] == LEGACY_HASH_NAME:
+                legacy_expected_hash_list.append(entry.hash['value'])
+                legacy_url_list.append(entry_url)
+                legacy_size_list.append(src_size)
+            else:
+                return False
 
         if src_dict and not extra_files_ok:
             return False
 
         hash_list = calculate_sha256(url_list, size_list)
-        for (logical_key, entry), url_hash in zip(self.walk(), hash_list):
+        for expected_hash, url_hash in zip(expected_hash_list, hash_list):
             if isinstance(url_hash, Exception):
                 raise url_hash
-            if entry.hash['value'] != url_hash:
+            if expected_hash != url_hash:
+                return False
+
+        legacy_hash_list = legacy_calculate_sha256(legacy_url_list, legacy_size_list)
+        for expected_hash, url_hash in zip(legacy_expected_hash_list, legacy_hash_list):
+            if isinstance(url_hash, Exception):
+                raise url_hash
+            if expected_hash != url_hash:
                 return False
 
         return True

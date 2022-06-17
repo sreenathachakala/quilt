@@ -1,4 +1,5 @@
 import base64
+import concurrent
 import functools
 import hashlib
 import itertools
@@ -6,9 +7,12 @@ import logging
 import math
 import os
 import pathlib
+import queue
 import shutil
 import stat
 import threading
+import types
+import warnings
 from codecs import iterdecode
 from collections import defaultdict, deque
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -1027,6 +1031,173 @@ def _calculate_sha256_internal(src_list, sizes, results):
             for _, future_list in futures:
                 for future in future_list:
                     future.cancel()
+
+    return results
+
+
+def legacy_calculate_sha256(src_list: List[PhysicalKey], sizes: List[int]):
+    assert len(src_list) == len(sizes)
+
+    if not src_list:
+        return []
+    return _legacy_calculate_sha256_internal(src_list, sizes, [None] * len(src_list))
+
+
+def _legacy_calculate_hash_get_s3_chunks(ctx, src, size):
+    params = dict(Bucket=src.bucket, Key=src.path)
+    if src.version_id is not None:
+        params.update(VersionId=src.version_id)
+    part_size = s3_transfer_config.multipart_chunksize
+    is_multi_part = (
+        size >= s3_transfer_config.multipart_threshold
+        and size > part_size
+    )
+    part_numbers = (
+        range(math.ceil(size / part_size))
+        if is_multi_part else
+        (None,)
+    )
+    s3_client = ctx.find_correct_client(S3Api.GET_OBJECT, src.bucket, params)
+
+    def read_to_queue(part_number, put_to_queue, stopped_event):
+        try:
+            logger.debug('%r part %s: download enqueued', src, part_number)
+            # This semaphore is released in iter_queue() when the part is fully
+            # downloaded and all chunks are retrieved from the queue or if download
+            # fails.
+            ctx.pending_parts_semaphore.acquire()
+            logger.debug('%r part %s: download started', src, part_number)
+            if part_number is not None:
+                start = part_number * part_size
+                end = min(start + part_size, size) - 1
+                part_params = dict(params, Range=f'bytes={start}-{end}')
+            else:
+                part_params = params
+
+            body = s3_client.get_object(**part_params)['Body']
+            for chunk in read_file_chunks(body):
+                put_to_queue(chunk)
+                if stopped_event.is_set():
+                    logger.debug('%r part %s: stopped', src, part_number)
+                    break
+
+            logger.debug('%r part %s: downloaded', src, part_number)
+        finally:
+            put_to_queue(None)
+
+    def iter_queue(part_number):
+        q = queue.Queue()
+        stopped_event = threading.Event()
+        f = ctx.executor.submit(read_to_queue, part_number, q.put_nowait, stopped_event)
+        try:
+            yield
+            yield from iter(q.get, None)
+        except GeneratorExit:
+            if f.cancel():
+                logger.debug('%r part %s: cancelled', src, part_number)
+            else:
+                stopped_event.set()
+        else:
+            f.result()  # Propagate exception from read_to_queue() if any.
+            logger.debug('%r part %s: processed', src, part_number)
+        finally:
+            if not f.cancelled():
+                ctx.pending_parts_semaphore.release()
+                logger.debug('%r part %s: semaphore released', src, part_number)
+
+    generators = deque()
+    for gen in map(iter_queue, part_numbers):
+        # Step into generator, so it will receive GeneratorExit when it's closed
+        # or garbage collected.
+        next(gen)
+        generators.append(gen)
+
+    return itertools.chain.from_iterable(
+        itertools.starmap(generators.popleft, itertools.repeat((), len(part_numbers))))
+
+
+@retry(stop=stop_after_attempt(MAX_FIX_HASH_RETRIES),
+       wait=wait_exponential(multiplier=1, min=1, max=10),
+       retry=retry_if_result(lambda results: any(r is None or isinstance(r, Exception) for r in results)),
+       retry_error_callback=lambda retry_state: retry_state.outcome.result(),
+       )
+def _legacy_calculate_sha256_internal(src_list, sizes, results):
+    total_size = sum(
+        size
+        for size, result in zip(sizes, results)
+        if result is None or isinstance(result, Exception)
+    )
+    # This controls how many parts can be stored in the memory.
+    # This includes the ones that are being downloaded or hashed.
+    # The number was chosen empirically.
+    s3_max_pending_parts = MAX_CONCURRENCY * 4
+    stopped = False
+
+    def get_file_chunks(src, size):
+        with open(src.path, 'rb') as file:
+            yield from read_file_chunks(file)
+
+            current_file_size = file.tell()
+            if current_file_size != size:
+                warnings.warn(
+                    f"Expected the package entry at {src!r} to be {size} B in size, but "
+                    f"found an object which is {current_file_size} B instead. This "
+                    f"indicates that the content of the file changed in between when you "
+                    f"included this  entry in the package (via set or set_dir) and now. "
+                    f"This should be avoided if possible."
+                )
+
+    def _process_url(src, size):
+        hash_obj = hashlib.sha256()
+
+        generator, exceptions_to_retry = (
+            (get_file_chunks(src, size), ())
+            if src.is_local() else
+            (
+                _legacy_calculate_hash_get_s3_chunks(s3_context, src, size),
+                (ConnectionError, HTTPClientError, ReadTimeoutError)
+            )
+        )
+        try:
+            for chunk in generator:
+                hash_obj.update(chunk)
+                progress_update(len(chunk))
+                if stopped:
+                    return
+        except exceptions_to_retry as e:
+            return e
+        else:
+            return hash_obj.hexdigest()
+        finally:
+            # We want this generator to be finished immediately,
+            # so it finishes its own tasks.
+            del generator
+
+    with tqdm(desc="Hashing", total=total_size, unit='B', unit_scale=True, disable=DISABLE_TQDM) as progress, \
+         ThreadPoolExecutor() as executor, \
+         ThreadPoolExecutor(
+             MAX_CONCURRENCY,
+             thread_name_prefix='s3-executor',
+         ) as s3_executor:
+        s3_context = types.SimpleNamespace(
+            find_correct_client=with_lock(S3ClientProvider().find_correct_client),
+            pending_parts_semaphore=threading.BoundedSemaphore(s3_max_pending_parts),
+            executor=s3_executor,
+        )
+        progress_update = with_lock(progress.update)
+        future_to_idx = {
+            executor.submit(_process_url, src, size): i
+            for i, (src, size, result) in enumerate(zip(src_list, sizes, results))
+            if result is None or isinstance(result, Exception)
+        }
+        try:
+            for future in concurrent.futures.as_completed(future_to_idx):
+                results[future_to_idx.pop(future)] = future.result()
+        finally:
+            stopped = True
+            while future_to_idx:
+                future, idx = future_to_idx.popitem()
+                future.cancel()
 
     return results
 
