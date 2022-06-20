@@ -19,7 +19,7 @@ export interface PackageUri {
   path?: string
   hash?: string
   tag?: string
-  action?: string
+  query?: URLSearchParams
 }
 
 function parsePackageSpec(spec: string, uri: string) {
@@ -74,18 +74,16 @@ export function parse(uri: string): PackageUri {
   if (!url.slashes) {
     throw new PackageUriError('missing slashes between protocol and registry.', uri)
   }
-  // if (url.path) {
-  //   throw new PackageUriError(
-  //     'non-bucket-root registries are not supported currently.',
-  //     uri,
-  //   )
-  // }
-  const bucket = url.host
-  const search = url.search
-  let action = undefined
-  if (search) {
-    action = 'revisePackage'
+  // NOTE: `search` is not a part of `path`, if parsed with `new URL`
+  // TODO: migrate to `new URL`
+  if (url.path && url.path !== url.search) {
+    throw new PackageUriError(
+      'non-bucket-root registries are not supported currently.',
+      uri,
+    )
   }
+  const bucket = url.host
+  // TODO: migrate to `new URLSearchParams`
   const params = parseQs((url.hash || '').replace('#', ''))
   if (!params.package) {
     throw new PackageUriError('missing "package=" part.', uri)
@@ -98,13 +96,14 @@ export function parse(uri: string): PackageUri {
     throw new PackageUriError('"path=" specified multiple times.', uri)
   }
   const path = params.path ? decodeURIComponent(params.path) : undefined
+  const query = url.search ? new URLSearchParams(url.search) : undefined
   return R.reject(R.isNil, {
     bucket,
     name,
     hash,
     tag,
     path,
-    action,
+    query,
   }) as unknown as PackageUri
 }
 

@@ -61,7 +61,9 @@ export default function UriResolver({ match }: RouteComponentProps<{ uri: string
       parsed.name,
       parsed.hash || parsed.tag,
       parsed.path,
-    ) + NamedRoutes.mkSearch({ resolvedFrom: uri, action: parsed.action })
+    ) +
+      NamedRoutes.mkSearch({ resolvedFrom: uri }) +
+      (parsed.query ? `&${parsed.query.toString()}` : '')
 
   if (to) return <Redirect to={to} />
 
