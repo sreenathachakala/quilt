@@ -76,7 +76,7 @@ export function parse(uri: string): PackageUri {
   }
   // NOTE: `search` is not a part of `path`, if parsed with `new URL`
   // TODO: migrate to `new URL`
-  if (url.path && url.path !== url.search) {
+  if (url.path && url.path !== url.search && url.path !== `/${url.search}`) {
     throw new PackageUriError(
       'non-bucket-root registries are not supported currently.',
       uri,
