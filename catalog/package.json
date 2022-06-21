@@ -145,7 +145,7 @@
     "zxcvbn": "^4.4.2"
   },
   "peerDependencies": {
-    "electron": "^19.0.4"
+    "electron": "^19.0.5"
   },
   "devDependencies": {
     "@finos/perspective-webpack-plugin": "^1.4.0",
