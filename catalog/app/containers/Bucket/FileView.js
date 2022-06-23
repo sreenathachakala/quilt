@@ -1,44 +1,28 @@
 import cx from 'classnames'
-import * as R from 'ramda'
 import * as React from 'react'
 import * as redux from 'react-redux'
 import * as M from '@material-ui/core'
 
-import JsonDisplay from 'components/JsonDisplay'
 // import Message from 'components/Message'
 import SelectDropdown from 'components/SelectDropdown'
 import * as Auth from 'containers/Auth'
 import * as AWS from 'utils/AWS'
-import AsyncResult from 'utils/AsyncResult'
 import * as Config from 'utils/Config'
-import pipeThru from 'utils/pipeThru'
 
-import Section from './Section'
+export { default as Meta } from './Meta'
 
 // TODO: move here everything that's reused btw Bucket/File, Bucket/PackageTree and Embed/File
 
-export function Meta({ data, ...props }) {
-  return pipeThru(data)(
-    AsyncResult.case({
-      Ok: (meta) =>
-        !!meta &&
-        !R.isEmpty(meta) && (
-          <Section icon="list" heading="Metadata" defaultExpanded {...props}>
-            <JsonDisplay value={meta} defaultExpanded={1} />
-          </Section>
-        ),
-      _: () => null,
-    }),
-  )
-}
-
-const useDownloadButtonStyles = M.makeStyles({
+const useDownloadButtonStyles = M.makeStyles((t) => ({
   root: {
     flexShrink: 0,
     marginBottom: -3,
     marginTop: -3,
   },
-})
+  label: {
+    marginRight: t.spacing(1),
+  },
+}))
 
 export function DownloadButtonLayout({ className, label, icon, ...props }) {
   const classes = useDownloadButtonStyles()
@@ -85,7 +69,7 @@ export function ViewModeSelector({ className, ...props }) {
   const sm = M.useMediaQuery(t.breakpoints.down('sm'))
   return (
     <SelectDropdown className={cx(classes.root, className)} {...props}>
-      {sm ? <M.Icon>visibility</M.Icon> : 'View as:'}
+      {sm ? <M.Icon>visibility</M.Icon> : <span className={classes.label}>View as:</span>}
     </SelectDropdown>
   )
 }
