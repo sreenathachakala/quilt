@@ -32,7 +32,7 @@ import * as Cache from 'utils/ResourceCache'
 import * as Sentry from 'utils/Sentry'
 import * as Store from 'utils/Store'
 import * as IPC from 'utils/electron/ipc'
-import SyncCredentials from 'utils/electron/credentials'
+import ElectronBeacon from 'utils/electron/beacon'
 import { Provider as IPCProvider } from 'utils/electron/ipc-provider'
 import fontLoader from 'utils/fontLoader'
 import RouterProvider, { LOCATION_CHANGE, selectLocation } from 'utils/router'
@@ -132,7 +132,7 @@ const Root = () => {
                                             <AWS.Credentials.Provider>
                                               <AWS.Config.Provider>
                                                 <IPCProvider value={IPC}>
-                                                  <SyncCredentials>
+                                                  <ElectronBeacon>
                                                     <AWS.Athena.Provider>
                                                       <AWS.S3.Provider>
                                                         <Notifications.WithNotifications>
@@ -146,7 +146,7 @@ const Root = () => {
                                                         </Notifications.WithNotifications>
                                                       </AWS.S3.Provider>
                                                     </AWS.Athena.Provider>
-                                                  </SyncCredentials>
+                                                  </ElectronBeacon>
                                                 </IPCProvider>
                                               </AWS.Config.Provider>
                                             </AWS.Credentials.Provider>
