@@ -1,11 +1,17 @@
 import * as R from 'ramda'
 import * as React from 'react'
+import * as Remarkable from 'remarkable'
 import * as M from '@material-ui/core'
 import * as Lab from '@material-ui/lab'
 
 import Loading from 'components/Placeholder'
 import StyledLink from 'utils/StyledLink'
 import * as IPC from 'utils/electron/ipc-provider'
+
+const markdown = new Remarkable.Remarkable('full', {
+  html: true,
+  typographer: true,
+})
 
 interface BrowserStyledLinkProps {
   href: string
@@ -29,32 +35,60 @@ function BrowserStyledLink({ children, href }: BrowserStyledLinkProps) {
   )
 }
 
-interface WelcomeProps {
+interface WhatsNewProps {
   changelog?: string
   open: boolean
-  lastBoot: {
-    version: string
-  }
-  currentBoot: {
-    version: string
-  }
   error?: Error
   onProceed: () => void
 }
 
-function Welcome({
-  lastBoot,
-  changelog,
-  // currentBoot,
-  onProceed,
-  open,
-}: WelcomeProps) {
-  const title = lastBoot ? `What's new` : `You've just installed new version`
+function WhatsNew({ changelog, onProceed, open }: WhatsNewProps) {
+  const content = React.useMemo(
+    () => (changelog ? markdown.render(changelog) : ''),
+    [changelog],
+  )
   return (
     <M.Dialog open={open} maxWidth="xs" fullWidth>
-      <M.DialogTitle>{title}</M.DialogTitle>
+      <M.DialogTitle>You've upgraded to the new version</M.DialogTitle>
       <M.DialogContent>
-        <M.DialogContentText>{changelog}</M.DialogContentText>
+        <M.DialogContentText dangerouslySetInnerHTML={{ __html: content }} />
+      </M.DialogContent>
+      <M.DialogActions>
+        <M.Button onClick={onProceed} color="primary" variant="outlined">
+          Got it!
+        </M.Button>
+      </M.DialogActions>
+    </M.Dialog>
+  )
+}
+
+interface WelcomeProps {
+  open: boolean
+  onProceed: () => void
+}
+
+function Welcome({ onProceed, open }: WelcomeProps) {
+  return (
+    <M.Dialog open={open} maxWidth="sm" fullWidth>
+      <M.DialogTitle>Thank you for installing Teleport</M.DialogTitle>
+      <M.DialogContent>
+        <M.DialogContentText>
+          <M.Typography>
+            Teleport app accompanied to `quilt3` and Catalog will help you download and
+            upload packages faster
+          </M.Typography>
+          <M.Typography variant="h4">Download</M.Typography>
+          <M.Typography>
+            To download package you can click on "Download package" button.
+          </M.Typography>
+          <M.Typography>
+            Package will be installed in your <code>~/Quilt</code> directory
+          </M.Typography>
+          <M.Typography variant="h4">Upload</M.Typography>
+          <M.Typography>
+            To download package you can click on "Revise package" button.
+          </M.Typography>
+        </M.DialogContentText>
       </M.DialogContent>
       <M.DialogActions>
         <M.Button onClick={onProceed} color="primary" variant="outlined">
@@ -100,7 +134,7 @@ interface BootInfo {
   quilt3: {
     installed: boolean
   }
-  lastBoot: {
+  lastBoot?: {
     version: string
   }
   currentBoot: {
@@ -132,20 +166,20 @@ export function Placeholder({
       <CliNotInstalled open error={bootInfo} onCancel={onCancel} onProceed={onProceed} />
     )
 
+  if (bootInfo.versionDiff.compare !== 0 && !bootInfo.lastBoot) {
+    return <Welcome open onProceed={onProceed} />
+  }
+
   if (bootInfo.versionDiff.compare !== 0) {
     return (
-      <Welcome
-        open
-        lastBoot={bootInfo.lastBoot}
-        currentBoot={bootInfo.currentBoot}
-        onProceed={onProceed}
-      />
+      <WhatsNew open changelog={bootInfo.versionDiff.changelog} onProceed={onProceed} />
     )
   }
 
   if (bootInfo.quilt3.installed === false)
     return <CliNotInstalled open onCancel={onCancel} onProceed={onProceed} />
 
+  console.log(bootInfo)
   throw new Error('Unexpected state')
 }
 
