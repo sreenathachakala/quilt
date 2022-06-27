@@ -29,6 +29,42 @@ function BrowserStyledLink({ children, href }: BrowserStyledLinkProps) {
   )
 }
 
+interface WelcomeProps {
+  changelog?: string
+  open: boolean
+  lastBoot: {
+    version: string
+  }
+  currentBoot: {
+    version: string
+  }
+  error?: Error
+  onProceed: () => void
+}
+
+function Welcome({
+  lastBoot,
+  changelog,
+  // currentBoot,
+  onProceed,
+  open,
+}: WelcomeProps) {
+  const title = lastBoot ? `What's new` : `You've just installed new version`
+  return (
+    <M.Dialog open={open} maxWidth="xs" fullWidth>
+      <M.DialogTitle>{title}</M.DialogTitle>
+      <M.DialogContent>
+        <M.DialogContentText>{changelog}</M.DialogContentText>
+      </M.DialogContent>
+      <M.DialogActions>
+        <M.Button onClick={onProceed} color="primary" variant="outlined">
+          Got it!
+        </M.Button>
+      </M.DialogActions>
+    </M.Dialog>
+  )
+}
+
 interface CliNotInstalledProps {
   open: boolean
   error?: Error
@@ -60,8 +96,24 @@ function CliNotInstalled({ error, onCancel, onProceed, open }: CliNotInstalledPr
   )
 }
 
+interface BootInfo {
+  quilt3: {
+    installed: boolean
+  }
+  lastBoot: {
+    version: string
+  }
+  currentBoot: {
+    version: string
+  }
+  versionDiff: {
+    compare: number
+    changelog?: string
+  }
+}
+
 interface CliPlaceholderState {
-  ready: Error | boolean | null
+  bootInfo: Error | BootInfo | null
   onCancel: () => void
   onProceed: () => void
 }
@@ -71,17 +123,28 @@ interface CliPlaceholderProps {
 }
 
 export function Placeholder({
-  state: { ready, onCancel, onProceed },
+  state: { bootInfo, onCancel, onProceed },
 }: CliPlaceholderProps) {
-  if (ready === null) return <Loading />
+  if (bootInfo === null) return <Loading />
 
-  if (ready === false)
-    return <CliNotInstalled open onCancel={onCancel} onProceed={onProceed} />
-
-  if (ready instanceof Error)
+  if (bootInfo instanceof Error)
     return (
-      <CliNotInstalled open error={ready} onCancel={onCancel} onProceed={onProceed} />
+      <CliNotInstalled open error={bootInfo} onCancel={onCancel} onProceed={onProceed} />
     )
+
+  if (bootInfo.versionDiff.compare !== 0) {
+    return (
+      <Welcome
+        open
+        lastBoot={bootInfo.lastBoot}
+        currentBoot={bootInfo.currentBoot}
+        onProceed={onProceed}
+      />
+    )
+  }
+
+  if (bootInfo.quilt3.installed === false)
+    return <CliNotInstalled open onCancel={onCancel} onProceed={onProceed} />
 
   throw new Error('Unexpected state')
 }
@@ -91,6 +154,7 @@ export function useCliReadiness(): [boolean, CliPlaceholderState] {
 
   const [cliReadyKey, setCliReadyKey] = React.useState(0)
   const [ready, setReady] = React.useState<Error | boolean | null>(null)
+  const [bootInfo, setBootInfo] = React.useState<BootInfo | null>(null)
 
   const onCancel = React.useCallback(() => {
     ipc.send(IPC.EVENTS.QUIT)
@@ -104,8 +168,13 @@ export function useCliReadiness(): [boolean, CliPlaceholderState] {
   React.useEffect(() => {
     const handleReady = async () => {
       try {
-        const { requirementsInstalled } = await ipc.invoke(IPC.EVENTS.READY)
-        setReady(requirementsInstalled)
+        const loadedBootInfo = await ipc.invoke(IPC.EVENTS.READY)
+        setReady(
+          !!loadedBootInfo &&
+            loadedBootInfo.quilt3.installed &&
+            loadedBootInfo.versionDiff.compare === 0,
+        )
+        setBootInfo(loadedBootInfo)
       } catch (error) {
         if (error instanceof Error) {
           setReady(error)
@@ -118,7 +187,7 @@ export function useCliReadiness(): [boolean, CliPlaceholderState] {
   return [
     ready === true,
     {
-      ready,
+      bootInfo,
       onCancel,
       onProceed,
     },
