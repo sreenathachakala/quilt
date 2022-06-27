@@ -179,7 +179,6 @@ export function Placeholder({
   if (bootInfo.quilt3.installed === false)
     return <CliNotInstalled open onCancel={onCancel} onProceed={onProceed} />
 
-  console.log(bootInfo)
   throw new Error('Unexpected state')
 }
 
