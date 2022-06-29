@@ -6,6 +6,7 @@ import * as M from '@material-ui/core'
 import { fade } from '@material-ui/core/styles'
 import type { ResultOf } from '@graphql-typed-document-node/core'
 
+import JsonDisplay from 'components/JsonDisplay'
 import Skeleton from 'components/Skeleton'
 import Sparkline from 'components/Sparkline'
 import * as Model from 'model'
@@ -183,22 +184,48 @@ const usePackageStyles = M.makeStyles((t) => ({
     color: t.palette.text.secondary,
     position: 'relative',
   },
-  updated: {
+  updated: ({ extended }: { extended: boolean }) => ({
     ...t.typography.body2,
     color: t.palette.text.secondary,
+    position: 'relative',
+    ...(extended
+      ? {}
+      : {
+          borderBottom: `1px dashed ${t.palette.text.secondary}`,
+          cursor: 'pointer',
+        }),
+    '&:hover': {
+      borderBottom: 0,
+    },
+  }),
+  meta: {
+    ...t.typography.body2,
+    color: t.palette.text.secondary,
+    margin: t.spacing(1, 0, 0),
     position: 'relative',
   },
 }))
 
 type PackageProps = NonNullable<
   ResultOf<typeof PACKAGE_LIST_QUERY>['packages']
->['page'][number]
+>['page'][number] & {
+  extended: boolean
+}
 
-function Package({ name, modified, revisions, bucket, accessCounts }: PackageProps) {
+function Package({
+  name,
+  modified,
+  revisions,
+  bucket,
+  accessCounts,
+  revision,
+  extended,
+}: PackageProps) {
   const { urls } = NamedRoutes.use()
-  const classes = usePackageStyles()
+  const classes = usePackageStyles({ extended })
   const t = M.useTheme()
   const xs = M.useMediaQuery(t.breakpoints.down('xs'))
+  const [revisionOpened, setRevisionOpened] = React.useState(extended)
   return (
     <M.Paper className={classes.root}>
       <div className={classes.handleContainer}>
@@ -223,10 +250,23 @@ function Package({ name, modified, revisions, bucket, accessCounts }: PackagePro
         <span
           className={classes.updated}
           title={modified ? modified.toString() : undefined}
+          onClick={() => (extended ? null : setRevisionOpened(!revisionOpened))}
         >
           {xs ? 'Upd. ' : 'Updated '}
           {modified ? <Format.Relative value={modified} /> : '[unknown: see console]'}
         </span>
+        <M.Collapse in={revisionOpened || extended}>
+          <div className={classes.meta}>
+            Message: {revision?.message}
+            {revision?.userMeta && (
+              <>
+                <br />
+                <span style={{ float: 'left' }}>Metadata:</span> {/* @ts-expect-error */}
+                <JsonDisplay value={revision?.userMeta} style={{ width: 'auto' }} />
+              </>
+            )}
+          </div>
+        </M.Collapse>
       </M.Box>
       {!!accessCounts && <Counts {...accessCounts} />}
     </M.Paper>
@@ -234,7 +274,7 @@ function Package({ name, modified, revisions, bucket, accessCounts }: PackagePro
 }
 
 function PackageSkel() {
-  const classes = usePackageStyles()
+  const classes = usePackageStyles({ extended: false })
   return (
     <M.Paper className={classes.root}>
       <M.Box p={2}>
@@ -439,6 +479,8 @@ function PackageList({ bucket, sort, filter, page }: PackageListProps) {
     disableStateDisplay: true,
   })
 
+  const [extended, setExtended] = React.useState(false)
+
   return (
     <>
       {createDialog.render({
@@ -544,6 +586,18 @@ function PackageList({ bucket, sort, filter, page }: PackageListProps) {
                     }
                   />
                 </M.Box>
+                <M.Box p={1} />
+                <M.Box>
+                  <M.FormControlLabel
+                    control={
+                      <M.Checkbox
+                        checked={extended}
+                        onChange={(e, checked) => setExtended(checked)}
+                      />
+                    }
+                    label="Extended view and search"
+                  />
+                </M.Box>
                 <M.Box flexGrow={1} display={{ xs: 'none', sm: 'block' }} />
                 {preferences?.ui?.actions?.createPackage && (
                   <M.Box display={{ xs: 'none', sm: 'block' }} pr={1}>
@@ -604,7 +658,7 @@ function PackageList({ bucket, sort, filter, page }: PackageListProps) {
                         error: displayError(),
                         data: (packagesData) =>
                           (packagesData.packages?.page || []).map((pkg) => (
-                            <Package key={pkg.name} {...pkg} />
+                            <Package key={pkg.name} {...pkg} extended={extended} />
                           )),
                       })}
                       {pages > 1 && (
