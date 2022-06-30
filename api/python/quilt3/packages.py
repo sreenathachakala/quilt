@@ -1648,9 +1648,7 @@ class Package:
 
         for logical_key, entry in self.walk():
             src_size = src_dict.pop(logical_key, None)
-            if src_size is None:
-                return False
-            if entry.size != src_size:
+            if src_size is None or entry.size != src_size:
                 return False
             entry_url = src.join(logical_key)
             if entry.hash['type'] == HASH_NAME:
