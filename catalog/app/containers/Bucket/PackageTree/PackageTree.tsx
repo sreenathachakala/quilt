@@ -11,9 +11,9 @@ import * as Lab from '@material-ui/lab'
 
 import { Crumb, copyWithoutSpaces, render as renderCrumbs } from 'components/BreadCrumbs'
 import Message from 'components/Message'
+import * as OpenInDesktop from 'containers/OpenInDesktop'
 import Placeholder from 'components/Placeholder'
 import * as Preview from 'components/Preview'
-import { OpenInDesktop } from 'containers/OpenInDesktop'
 import * as SyncFolders from 'containers/SyncFolders'
 import AsyncResult from 'utils/AsyncResult'
 import * as AWS from 'utils/AWS'
@@ -297,10 +297,6 @@ function DirDisplay({
     [],
   )
 
-  const [confirmingDesktop, setConfirmingDesktop] = React.useState(false)
-  const confirmDesktop = React.useCallback(() => setConfirmingDesktop(true), [])
-  const unconfirmDesktop = React.useCallback(() => setConfirmingDesktop(false), [])
-
   const onPackageDeleteDialogClose = React.useCallback(() => {
     setDeletionState(
       R.mergeLeft({
@@ -349,12 +345,14 @@ function DirDisplay({
     return localHandle?.lastModified.valueOf() - lastModified.valueOf()
   }, [localHandle?.lastModified, lastModified])
 
+  const openInDesktopState = OpenInDesktop.use(packageHandle, size)
+
   return (
     <>
-      <OpenInDesktop
-        open={confirmingDesktop}
-        packageHandle={packageHandle}
-        onClose={unconfirmDesktop}
+      <OpenInDesktop.Dialog
+        open={openInDesktopState.confirming}
+        onClose={openInDesktopState.unconfirm}
+        onConfirm={openInDesktopState.openInDesktop}
         size={size}
       />
 
@@ -462,7 +460,6 @@ function DirDisplay({
           const downloadPath = path
             ? `package/${bucket}/${name}/${hash}/${path}`
             : `package/${bucket}/${name}/${hash}`
-
           const hasRevisionMenu =
             preferences?.ui?.actions?.deleteRevision ||
             preferences?.ui?.actions?.openInDesktop
@@ -510,7 +507,7 @@ function DirDisplay({
                   <Download.DownloadButton
                     className={classes.button}
                     label={path ? 'Download sub-package' : 'Download package'}
-                    onClick={confirmDesktop}
+                    onClick={openInDesktopState.confirm}
                     path={downloadPath}
                   />
                 </ActionAvailable>
@@ -518,7 +515,7 @@ function DirDisplay({
                   <RevisionMenu
                     className={classes.button}
                     onDelete={confirmDelete}
-                    onDesktop={confirmDesktop}
+                    onDesktop={openInDesktopState.confirm}
                   />
                 )}
               </TopBar>
@@ -526,7 +523,7 @@ function DirDisplay({
                 <PkgCode {...{ ...packageHandle, hashOrTag, path }} />
               )}
               {preferences?.ui?.blocks?.meta && (
-                <FileView.Meta data={AsyncResult.Ok(dir.metadata)} />
+                <FileView.PackageMeta data={AsyncResult.Ok(dir.metadata)} />
               )}
               <M.Box mt={2}>
                 {preferences?.ui?.blocks?.browser && <Listing items={items} key={hash} />}
@@ -720,7 +717,7 @@ function FileDisplay({
                     <PkgCode {...{ ...packageHandle, hashOrTag, path }} />
                   )}
                   {preferences?.ui?.blocks?.meta && (
-                    <FileView.Meta data={AsyncResult.Ok(file.metadata)} />
+                    <FileView.ObjectMeta data={AsyncResult.Ok(file.metadata)} />
                   )}
                   <Section icon="remove_red_eye" heading="Preview" expandable={false}>
                     {withPreview(
