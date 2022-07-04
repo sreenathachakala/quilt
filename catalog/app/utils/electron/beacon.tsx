@@ -15,27 +15,17 @@ const serializeCredentials = (credentials: Credentials) => ({
   sessionToken: credentials.sessionToken,
 })
 
-function useBeaconData() {
-  const credentials: Credentials = AWS.Credentials.use()
-  return React.useMemo(
-    () => ({
-      credentials: serializeCredentials(credentials),
-    }),
-    [credentials],
-  )
-}
-
 interface BeaconProps {
   children: React.ReactNode
 }
 
 export default function Beacon({ children }: BeaconProps) {
-  const beaconData = useBeaconData()
-
+  const credentials: Credentials = AWS.Credentials.use()
   const ipc = IPC.use()
   const sendBeacon = React.useCallback(() => {
+    const beaconData = { credentials: serializeCredentials(credentials) }
     ipc.send(IPC.EVENTS.BEACON, beaconData)
-  }, [beaconData, ipc])
+  }, [credentials, ipc])
 
   React.useEffect(() => {
     const timer = setInterval(sendBeacon, 5000)
