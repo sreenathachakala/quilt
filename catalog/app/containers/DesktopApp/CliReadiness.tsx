@@ -77,6 +77,10 @@ function Welcome({ onProceed, open }: WelcomeProps) {
             Teleport app accompanied to `quilt3` and Catalog will help you download and
             upload packages faster
           </M.Typography>
+          <M.Typography variant="h4">Okta login</M.Typography>
+          <M.Typography>
+            To enable Okta login set http://localhost:3000 as available host
+          </M.Typography>
           <M.Typography variant="h4">Download</M.Typography>
           <M.Typography>
             To download package you can click on "Download package" button.
