@@ -144,7 +144,21 @@ function PackageCreationForm({
 
   const [selectedBucket, selectBucket] = React.useState(sourceBuckets.getDefault)
 
-  const existingEntries = initial?.entries ?? EMPTY_MANIFEST_ENTRIES
+  const packageHandle = React.useMemo(
+    () => ({ bucket, name: initial?.name || '', hash: '' }),
+    [bucket, initial?.name],
+  )
+  const [localHandle] = SyncFolders.useLocalHandle(packageHandle)
+  // const existingEntries = initial?.entries ?? EMPTY_MANIFEST_ENTRIES
+  const existingEntries = (localHandle?.children || []).reduce((memo, h) => ({
+    ...memo,
+    [h.name]: {
+      physicalKey: h.path || '',
+      size: h.size,
+      meta: null,
+      hash: '',
+    },
+  }), {})
 
   const initialFiles: FI.FilesState = React.useMemo(
     () => ({ existing: existingEntries, added: {}, deleted: {} }),
@@ -391,12 +405,6 @@ function PackageCreationForm({
   // HACK: FIXME: it triggers name validation with correct workflow
   const [hideMeta, setHideMeta] = React.useState(false)
 
-  const packageHandle = React.useMemo(
-    () => ({ bucket, name: initial?.name || '', hash: '' }),
-    [bucket, initial?.name],
-  )
-  const [localHandle] = SyncFolders.useLocalHandle(packageHandle)
-
   return (
     <RF.Form
       onSubmit={onSubmitWrapped}
@@ -512,7 +520,7 @@ function PackageCreationForm({
                 </Layout.LeftColumn>
 
                 <Layout.RightColumn>
-                  {desktop ? (
+                  {!desktop ? (
                     <RF.Field
                       className={cx(classes.files, {
                         [classes.filesWithError]: !!entriesError,

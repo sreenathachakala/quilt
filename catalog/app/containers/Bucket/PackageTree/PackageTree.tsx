@@ -339,6 +339,7 @@ function DirDisplay({
   )
 
   const [localHandle] = SyncFolders.useLocalHandle(packageHandle)
+  console.log({ localHandle })
 
   const modificationsDiff = React.useMemo(() => {
     if (!localHandle?.lastModified || !lastModified) return 0

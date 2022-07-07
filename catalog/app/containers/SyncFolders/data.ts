@@ -12,6 +12,8 @@ export interface LocalHandle {
   id?: string
   lastModified?: Date
   path: string
+
+  children: { name: string; path: string; size: number }[]
 }
 
 export function useRoot(): [RootHandle | null, (rootHandle: RootHandle) => void] {
