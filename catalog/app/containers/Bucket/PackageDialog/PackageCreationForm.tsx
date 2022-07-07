@@ -150,15 +150,22 @@ function PackageCreationForm({
   )
   const [localHandle] = SyncFolders.useLocalHandle(packageHandle)
   // const existingEntries = initial?.entries ?? EMPTY_MANIFEST_ENTRIES
-  const existingEntries = (localHandle?.children || []).reduce((memo, h) => ({
-    ...memo,
-    [h.name]: {
-      physicalKey: h.path || '',
-      size: h.size,
-      meta: null,
-      hash: '',
-    },
-  }), {})
+  const existingEntries = React.useMemo(
+    () =>
+      (localHandle?.children || []).reduce(
+        (memo, h) => ({
+          ...memo,
+          [h.name]: {
+            physicalKey: h.path || '',
+            size: h.size,
+            meta: null,
+            hash: '',
+          },
+        }),
+        {},
+      ),
+    [localHandle],
+  )
 
   const initialFiles: FI.FilesState = React.useMemo(
     () => ({ existing: existingEntries, added: {}, deleted: {} }),

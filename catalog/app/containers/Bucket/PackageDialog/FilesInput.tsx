@@ -272,6 +272,7 @@ interface IntermediateEntry {
 }
 
 const computeEntries = ({ added, deleted, existing }: FilesState) => {
+  console.log('EXISTING', existing)
   const existingEntries: IntermediateEntry[] = Object.entries(existing).map(
     ([path, { size, hash, meta }]) => {
       if (path in deleted) {
