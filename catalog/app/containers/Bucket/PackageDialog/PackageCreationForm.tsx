@@ -84,6 +84,47 @@ const useStyles = M.makeStyles((t) => ({
   },
 }))
 
+function useLocalEntries(
+  localHandle: SyncFolders.LocalHandle | null,
+  initialEntries?: Model.PackageContentsFlatMap,
+): Model.PackageContentsFlatMap | null {
+  return React.useMemo(() => {
+    if (!localHandle) return null
+
+    return (localHandle?.children || []).reduce((memo, h) => {
+      const output: Model.PackageContentsFlatMap = {
+        ...memo,
+        [h.name]: {
+          physicalKey: h.path || '',
+          size: h.size,
+          meta: null,
+          hash: h.hash,
+          state: undefined,
+        },
+      }
+      if (
+        output[h.name] &&
+        initialEntries?.[h.name] &&
+        initialEntries?.[h.name].hash !== h.hash
+      ) {
+        output[h.name].state = 'modified'
+      }
+      return output
+    }, {})
+  }, [initialEntries, localHandle])
+}
+
+function useExistingEntries(
+  localHandle: SyncFolders.LocalHandle | null,
+  initialEntries?: Model.PackageContentsFlatMap,
+) {
+  const localEntries = useLocalEntries(localHandle, initialEntries)
+  return React.useMemo(() => {
+    if (localEntries !== null) return localEntries
+    return initialEntries ?? EMPTY_MANIFEST_ENTRIES
+  }, [initialEntries, localEntries])
+}
+
 interface PackageCreationFormProps {
   bucket: string
   close: () => void
@@ -150,24 +191,7 @@ function PackageCreationForm({
     [bucket, initial?.name],
   )
   const [localHandle] = SyncFolders.useLocalHandle(packageHandle)
-  // const existingEntries = initial?.entries ?? EMPTY_MANIFEST_ENTRIES
-  const existingEntries = React.useMemo(
-    () =>
-      (localHandle?.children || []).reduce(
-        (memo, h) => ({
-          ...memo,
-          [h.name]: {
-            physicalKey: h.path || '',
-            size: h.size,
-            meta: null,
-            hash: '',
-          },
-        }),
-        {},
-      ),
-    [localHandle],
-  )
-
+  const existingEntries = useExistingEntries(localHandle, initial?.entries)
   const initialFiles: FI.FilesState = React.useMemo(
     () => ({ existing: existingEntries, added: {}, deleted: {} }),
     [existingEntries],

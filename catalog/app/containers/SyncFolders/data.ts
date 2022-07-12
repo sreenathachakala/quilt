@@ -13,7 +13,7 @@ export interface LocalHandle {
   lastModified?: Date
   path: string
 
-  children: { name: string; path: string; size: number }[]
+  children: { name: string; path: string; size: number; hash: string }[]
 }
 
 export function useRoot(): [RootHandle | null, (rootHandle: RootHandle) => void] {

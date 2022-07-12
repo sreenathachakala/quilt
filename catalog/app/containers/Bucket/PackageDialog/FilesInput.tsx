@@ -272,9 +272,8 @@ interface IntermediateEntry {
 }
 
 const computeEntries = ({ added, deleted, existing }: FilesState) => {
-  console.log('EXISTING', existing)
   const existingEntries: IntermediateEntry[] = Object.entries(existing).map(
-    ([path, { size, hash, meta }]) => {
+    ([path, { size, hash, meta, state: initialState }]) => {
       if (path in deleted) {
         return { state: 'deleted' as const, type: 'local' as const, path, size, meta }
       }
@@ -296,7 +295,13 @@ const computeEntries = ({ added, deleted, existing }: FilesState) => {
         }
         return { state, type, path, size: a.size, meta }
       }
-      return { state: 'unchanged' as const, type: 'local' as const, path, size, meta }
+      return {
+        state: initialState || ('unchanged' as const),
+        type: 'local' as const,
+        path,
+        size,
+        meta,
+      }
     },
   )
   const addedEntries = Object.entries(added).reduce((acc, [path, f]) => {

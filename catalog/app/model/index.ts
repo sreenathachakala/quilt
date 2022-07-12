@@ -48,6 +48,7 @@ export interface PackageEntry {
   hash: string
   meta: Types.JsonRecord | null
   size: number
+  state?: $TSFixMe
 }
 
 export type PackageContentsFlatMap = Record<string, PackageEntry>
