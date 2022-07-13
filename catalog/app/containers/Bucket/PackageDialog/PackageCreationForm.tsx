@@ -92,28 +92,26 @@ function useLocalEntries(
     if (!localHandle) return null
 
     return (localHandle?.children || []).reduce((memo, h) => {
-      const output: Model.PackageContentsFlatMap = {
-        ...memo,
-        [h.name]: {
+      const entryInManifest = memo[h.name]
+      const output: Model.PackageContentsFlatMap = R.assoc(
+        h.name,
+        {
           physicalKey: h.path || '',
           size: h.size,
           meta: null,
           hash: h.hash,
           state: undefined,
         },
-      }
-      if (output[h.name] && !initialEntries?.[h.name]) {
+        memo,
+      )
+      if (!entryInManifest) {
         output[h.name].state = 'added'
       }
-      if (
-        output[h.name] &&
-        initialEntries?.[h.name] &&
-        initialEntries?.[h.name].hash !== h.hash
-      ) {
+      if (entryInManifest && entryInManifest.hash !== h.hash) {
         output[h.name].state = 'modified'
       }
       return output
-    }, {})
+    }, initialEntries || {})
   }, [initialEntries, localHandle])
 }
 
