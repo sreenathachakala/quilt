@@ -18,9 +18,6 @@ const useBucketStyles = M.makeStyles((t) => ({
     flexDirection: 'column',
     padding: t.spacing(4),
     position: 'relative',
-    '&:hover $actions': {
-      display: 'flex',
-    },
   },
   title: {
     ...t.typography.h6,
@@ -75,27 +72,6 @@ const useBucketStyles = M.makeStyles((t) => ({
       background: t.palette.secondary.main,
     },
   },
-  actions: {
-    alignItems: 'center',
-    animation: '$appear .3s ease',
-    background:
-      'linear-gradient(to top, rgba(31, 33, 81, 0.9) 0%, 90%, rgba(31, 33, 81, 0.1) 100%)',
-    display: 'none',
-    transform: 'translateY(-50%)',
-    justifyContent: 'space-between',
-    padding: t.spacing(2),
-    position: 'absolute',
-    right: 0,
-    top: '50%',
-  },
-  '@keyframes appear': {
-    '0%': {
-      opacity: 0.3,
-    },
-    '100%': {
-      opacity: 1,
-    },
-  },
 }))
 
 function Bucket({ bucket, onTagClick, tagIsMatching }) {
@@ -136,15 +112,6 @@ function Bucket({ bucket, onTagClick, tagIsMatching }) {
               {t}
             </button>
           ))}
-        </div>
-      )}
-      {cfg.desktop && (
-        <div className={classes.actions}>
-          <Link to={urls.bucketPackageList(bucket.name)}>
-            <M.Button size="large" variant="contained" color="primary">
-              Packages
-            </M.Button>
-          </Link>
         </div>
       )}
     </div>
