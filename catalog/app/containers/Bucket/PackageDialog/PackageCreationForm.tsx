@@ -102,6 +102,9 @@ function useLocalEntries(
           state: undefined,
         },
       }
+      if (output[h.name] && !initialEntries?.[h.name]) {
+        output[h.name].state = 'added'
+      }
       if (
         output[h.name] &&
         initialEntries?.[h.name] &&
