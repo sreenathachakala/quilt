@@ -9,6 +9,7 @@ import { fade } from '@material-ui/core/styles'
 
 import * as urls from 'constants/urls'
 import * as Model from 'model'
+import * as Config from 'utils/Config'
 import StyledLink from 'utils/StyledLink'
 import assertNever from 'utils/assertNever'
 import dissocBy from 'utils/dissocBy'
@@ -721,23 +722,24 @@ const useDropzoneMessageStyles = M.makeStyles((t) => ({
 
 interface DropzoneMessageProps {
   className?: string
-  label?: React.ReactNode
   error: React.ReactNode
   warn: { upload: boolean; s3: boolean; count: boolean }
 }
 
-export function DropzoneMessage({
-  className,
-  label: defaultLabel,
-  error,
-  warn,
-}: DropzoneMessageProps) {
+function DropzoneMessage({ className, error, warn }: DropzoneMessageProps) {
   const classes = useDropzoneMessageStyles()
+  const { desktop } = Config.use()
 
   const label = React.useMemo(() => {
     if (error) return <span>{error}</span>
     if (!warn.s3 && !warn.count && !warn.upload) {
-      return <span>{defaultLabel || 'Drop files here or click to browse'}</span>
+      return (
+        <span>
+          {desktop
+            ? 'Click to browse local folder'
+            : 'Drop files here or click to browse'}
+        </span>
+      )
     }
     return (
       <div>
@@ -758,7 +760,7 @@ export function DropzoneMessage({
         )}
       </div>
     )
-  }, [defaultLabel, error, warn.upload, warn.s3, warn.count])
+  }, [error, warn.upload, warn.s3, warn.count])
 
   return (
     <div
@@ -1149,6 +1151,7 @@ function DirUpload({
   delayHashing,
   disableStateDisplay,
 }: DirUploadProps) {
+  const { desktop } = Config.use()
   const [expanded, setExpanded] = React.useState(false)
 
   const toggleExpanded = React.useCallback(
@@ -1180,6 +1183,7 @@ function DirUpload({
     onDrop,
     noDragEventsBubbling: true,
     noClick: true,
+    noDrag: !!desktop,
   })
 
   // eslint-disable-next-line consistent-return
@@ -1291,6 +1295,7 @@ const useFilesInputStyles = M.makeStyles((t) => ({
 }))
 
 interface FilesInputProps {
+  onDesktopClick: (event: React.MouseEvent<HTMLElement, MouseEvent>) => void | null
   initialS3Path?: string
   input: {
     value: FilesState
@@ -1344,7 +1349,9 @@ export function FilesInput({
   disableStateDisplay = false,
   ui = {},
   initialS3Path,
+  onDesktopClick,
 }: FilesInputProps) {
+  const { desktop } = Config.use()
   const classes = useFilesInputStyles()
 
   const pRef = React.useRef<Promise<any>>()
@@ -1408,6 +1415,7 @@ export function FilesInput({
   const isDragging = useDragging()
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     disabled,
+    noDrag: !!desktop,
     onDrop,
   })
 
@@ -1547,7 +1555,9 @@ export function FilesInput({
 
       <ContentsContainer outlined={isDragging && !ref.current.disabled}>
         <Contents
-          {...getRootProps()}
+          {...getRootProps({
+            onClick: onDesktopClick,
+          })}
           interactive
           active={isDragActive && !ref.current.disabled}
           error={!!error}

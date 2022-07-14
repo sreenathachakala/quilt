@@ -18,6 +18,7 @@ import * as BucketPreferences from 'utils/BucketPreferences'
 import * as Config from 'utils/Config'
 import * as Data from 'utils/Data'
 import assertNever from 'utils/assertNever'
+import * as IPC from 'utils/electron/ipc-provider'
 import { mkFormError, mapInputErrors } from 'utils/formTools'
 import * as s3paths from 'utils/s3paths'
 import * as tagged from 'utils/taggedV2'
@@ -92,6 +93,7 @@ function useLocalEntries(
     if (!localHandle) return null
 
     return (localHandle?.children || []).reduce((memo, h) => {
+      if (h.isDirectory) return memo
       const entryInManifest = memo[h.name]
       const output: Model.PackageContentsFlatMap = R.assoc(
         h.name,
@@ -124,6 +126,19 @@ function useExistingEntries(
     if (localEntries !== null) return localEntries
     return initialEntries ?? EMPTY_MANIFEST_ENTRIES
   }, [initialEntries, localEntries])
+}
+
+function useOnDesktopClick(localHandle: SyncFolders.LocalHandle | null) {
+  const { desktop }: { desktop: boolean } = Config.use()
+  const ipc = IPC.use()
+  if (!desktop) return null
+  return React.useCallback(
+    (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
+      event.stopPropagation()
+      ipc.invoke(IPC.EVENTS.OPEN_IN_EXPLORER, localHandle?.path)
+    },
+    [localHandle],
+  )
 }
 
 interface PackageCreationFormProps {
@@ -441,6 +456,8 @@ function PackageCreationForm({
   // HACK: FIXME: it triggers name validation with correct workflow
   const [hideMeta, setHideMeta] = React.useState(false)
 
+  const onDesktopClick = useOnDesktopClick(localHandle)
+
   return (
     <RF.Form
       onSubmit={onSubmitWrapped}
@@ -584,6 +601,7 @@ function PackageCreationForm({
                     disableStateDisplay={disableStateDisplay}
                     ui={{ reset: ui.resetFiles }}
                     initialS3Path={initial?.path}
+                    onDesktopClick={onDesktopClick}
                   />
 
                   <JsonValidationErrors
