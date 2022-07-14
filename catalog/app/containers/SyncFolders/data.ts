@@ -48,27 +48,26 @@ export function useRoot(): [RootHandle | null, (rootHandle: RootHandle) => void]
   return [root, changeRoot]
 }
 
-export function useLocalHandle(
-  packageHandle: PackageHandleBase,
-): [LocalHandle | null, () => void] {
+export function useLocalHandle(packageHandle: PackageHandleBase): LocalHandle | null {
   const ipc = IPC.use()
-  const [key, setKey] = React.useState(1)
-  const inc = React.useCallback(() => setKey(R.inc), [setKey])
   const [localHandle, setLocalHandle] = React.useState<null | LocalHandle>(null)
-  React.useEffect(() => {
-    async function fetchData() {
-      try {
-        const data = await ipc.invoke(IPC.EVENTS.SYNC_LOCAL_HANDLE, packageHandle)
+  const fetchData = React.useCallback(async () => {
+    try {
+      const data = await ipc.invoke(IPC.EVENTS.SYNC_LOCAL_HANDLE, packageHandle)
+      if (!R.equals(localHandle, data)) {
         setLocalHandle(data)
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.log('Couldnt get syncing folder groups')
-        // eslint-disable-next-line no-console
-        console.log(error)
       }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log('Couldnt get syncing folder groups')
+      // eslint-disable-next-line no-console
+      console.log(error)
     }
+  }, [ipc, localHandle, packageHandle])
+  React.useEffect(() => {
+    const timer = setInterval(fetchData, 1000)
+    return () => clearInterval(timer)
+  }, [fetchData])
 
-    fetchData()
-  }, [ipc, key, packageHandle])
-  return [localHandle, inc]
+  return localHandle
 }

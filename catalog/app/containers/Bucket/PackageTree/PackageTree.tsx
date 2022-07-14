@@ -339,7 +339,7 @@ function DirDisplay({
     [bucket, name, hash],
   )
 
-  const [localHandle] = SyncFolders.useLocalHandle(packageHandle)
+  const localHandle = SyncFolders.useLocalHandle(packageHandle)
 
   const modificationsDiff = React.useMemo(() => {
     if (!localHandle?.lastModified || !lastModified) return 0
