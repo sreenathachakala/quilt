@@ -131,14 +131,14 @@ function useExistingEntries(
 function useOnDesktopClick(localHandle: SyncFolders.LocalHandle | null) {
   const { desktop }: { desktop: boolean } = Config.use()
   const ipc = IPC.use()
-  if (!desktop) return null
-  return React.useCallback(
+  const onClick = React.useCallback(
     (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
       event.stopPropagation()
       ipc.invoke(IPC.EVENTS.OPEN_IN_EXPLORER, localHandle?.path)
     },
-    [localHandle],
+    [ipc, localHandle],
   )
+  return desktop ? onClick : undefined
 }
 
 interface PackageCreationFormProps {

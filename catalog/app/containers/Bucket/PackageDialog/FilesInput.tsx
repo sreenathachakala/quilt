@@ -760,7 +760,7 @@ function DropzoneMessage({ className, error, warn }: DropzoneMessageProps) {
         )}
       </div>
     )
-  }, [error, warn.upload, warn.s3, warn.count])
+  }, [desktop, error, warn.upload, warn.s3, warn.count])
 
   return (
     <div
@@ -1295,7 +1295,7 @@ const useFilesInputStyles = M.makeStyles((t) => ({
 }))
 
 interface FilesInputProps {
-  onDesktopClick: (event: React.MouseEvent<HTMLElement, MouseEvent>) => void | null
+  onDesktopClick?: (event: React.MouseEvent<HTMLElement, MouseEvent>) => void
   initialS3Path?: string
   input: {
     value: FilesState
