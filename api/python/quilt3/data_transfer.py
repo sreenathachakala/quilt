@@ -31,7 +31,7 @@ from botocore.exceptions import (
     HTTPClientError,
     ReadTimeoutError,
 )
-from s3transfer.utils import ChunksizeAdjuster, ReadFileChunk
+from s3transfer.utils import ReadFileChunk
 from tenacity import (
     retry,
     retry_if_not_result,
@@ -666,12 +666,11 @@ def _calculate_etag(file_path):
     """
     size = pathlib.Path(file_path).stat().st_size
     with open(file_path, 'rb') as fd:
-        if size <= s3_transfer_config.multipart_threshold:
+        if size < CHECKSUM_MULTIPART_THRESHOLD:
             contents = fd.read()
             etag = hashlib.md5(contents).hexdigest()
         else:
-            adjuster = ChunksizeAdjuster()
-            chunksize = adjuster.adjust_chunksize(s3_transfer_config.multipart_chunksize, size)
+            chunksize = get_checksum_chunksize(size)
 
             hashes = []
             for contents in read_file_chunks(fd, chunksize):
