@@ -58,7 +58,7 @@ setup(
     install_requires=[
         'appdirs>=1.4.0',
         'aws-requests-auth>=0.4.2',
-        'boto3>=1.21.10',
+        'boto3>=1.21.7',
         'jsonlines==1.2.0',
         'PyYAML>=5.1',
         'requests>=2.12.4',
