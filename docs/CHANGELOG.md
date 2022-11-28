@@ -7,6 +7,8 @@
 
 ## Catalog, Lambdas
 !-->
+
+# 5.1.0 - 2022-11-29
 ## Python API
 * [Fixed] Fix check to determine if a file is a tempfile in Windows with Python 3.8+ ([#2900](https://github.com/quiltdata/quilt/pull/2900))
 * [Changed] Disable upload optimization for objects with SSE-KMS ([#2790](https://github.com/quiltdata/quilt/pull/2790))
