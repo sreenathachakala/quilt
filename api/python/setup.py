@@ -69,6 +69,9 @@ setup(
         'importlib_metadata; python_version < "3.8"',
         'quilt3_local'
     ],
+    dependency_links={
+        'git+https://github.com/sreenathachakala/quilt3_local.git@quilt-v1#egg=quilt3_local'
+    },
     extras_require={
         'pyarrow': [
             'numpy>=1.14.0',                # required by pandas, but missing from its dependencies.
@@ -88,7 +91,6 @@ setup(
             'git-pylint-commit-hook',
         ],
         'catalog': [
-            'git+https://github.com/sreenathachakala/quilt3_local.git@quilt-v1#egg=quilt3_local',
             'uvicorn>=0.15,<0.18',
         ],
     },
