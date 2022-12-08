@@ -67,10 +67,7 @@ setup(
         'requests_futures==1.0.0',
         'jsonschema>=3,<5',
         'importlib_metadata; python_version < "3.8"',
-        'quilt3_local'
-    ],
-    dependency_links=[
-        'git+https://github.com/sreenathachakala/quilt3_local.git@quilt-v1#egg=quilt3_local'
+        'quilt3_local @ git+https://github.com/sreenathachakala/quilt3_local.git@quilt-v1#egg=quilt3_local'
     ],
     extras_require={
         'pyarrow': [
