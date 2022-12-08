@@ -66,7 +66,7 @@ function invalidateAffectedRoles(policy: any, cache: GraphCache.Cache) {
 
 export function GraphQLProvider({ children }: React.PropsWithChildren<{}>) {
   const { registryUrl } = Config.use()
-  const url = `${registryUrl}/graphql`
+  const url = `${registryUrl}/graphql/`
 
   const sessionId: number = redux.useSelector(AuthSelectors.sessionId)
 
