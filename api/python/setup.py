@@ -67,6 +67,7 @@ setup(
         'requests_futures==1.0.0',
         'jsonschema>=3,<5',
         'importlib_metadata; python_version < "3.8"',
+        'quilt3_local'
     ],
     extras_require={
         'pyarrow': [
@@ -87,7 +88,7 @@ setup(
             'git-pylint-commit-hook',
         ],
         'catalog': [
-            'quilt3_local>=1,<2',
+            'git+https://github.com/sreenathachakala/quilt3_local.git@quilt-v1#egg=quilt3_local',
             'uvicorn>=0.15,<0.18',
         ],
     },
