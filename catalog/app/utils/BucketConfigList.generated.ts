@@ -44,18 +44,6 @@ export const utils_BucketConfigListDocument = {
       operation: 'query',
       name: { kind: 'Name', value: 'utils_BucketConfigList' },
       variableDefinitions: [
-        {
-          kind: 'VariableDefinition',
-          variable: {
-            kind: 'Variable',
-            name: { kind: 'Name', value: 'includeCollaborators' },
-          },
-          type: {
-            kind: 'NonNullType',
-            type: { kind: 'NamedType', name: { kind: 'Name', value: 'Boolean' } },
-          },
-          defaultValue: { kind: 'BooleanValue', value: false },
-        },
       ],
       selectionSet: {
         kind: 'SelectionSet',
@@ -68,49 +56,8 @@ export const utils_BucketConfigListDocument = {
               selections: [
                 { kind: 'Field', name: { kind: 'Name', value: 'name' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'title' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'iconUrl' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'description' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'linkedData' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'overviewUrl' } },
-                { kind: 'Field', name: { kind: 'Name', value: 'tags' } },
                 { kind: 'Field', name: { kind: 'Name', value: 'relevanceScore' } },
-                {
-                  kind: 'Field',
-                  name: { kind: 'Name', value: 'collaborators' },
-                  directives: [
-                    {
-                      kind: 'Directive',
-                      name: { kind: 'Name', value: 'include' },
-                      arguments: [
-                        {
-                          kind: 'Argument',
-                          name: { kind: 'Name', value: 'if' },
-                          value: {
-                            kind: 'Variable',
-                            name: { kind: 'Name', value: 'includeCollaborators' },
-                          },
-                        },
-                      ],
-                    },
-                  ],
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: { kind: 'Name', value: 'collaborator' },
-                        selectionSet: {
-                          kind: 'SelectionSet',
-                          selections: [
-                            { kind: 'Field', name: { kind: 'Name', value: 'email' } },
-                            { kind: 'Field', name: { kind: 'Name', value: 'username' } },
-                          ],
-                        },
-                      },
-                      { kind: 'Field', name: { kind: 'Name', value: 'permissionLevel' } },
-                    ],
-                  },
-                },
               ],
             },
           },

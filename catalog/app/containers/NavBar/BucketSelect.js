@@ -98,7 +98,7 @@ function Bucket({ iconUrl, name, title, description }) {
       <BucketIcon alt={title} className={classes.icon} src={iconUrl} />
       <div className={classes.text}>
         <div className={classes.title}>
-          {title} (s3://{name})
+          s3://{name}
         </div>
         <div className={classes.desc}>{description}</div>
       </div>
