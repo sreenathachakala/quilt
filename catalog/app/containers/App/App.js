@@ -171,7 +171,7 @@ export default function App() {
           <Route path={paths.storyBook} component={StoryBook} exact />
         )}
 
-        <Route component={protect(ThrowNotFound)} />
+        <Route component={Home} />
       </Switch>
     </CatchNotFound>
   )

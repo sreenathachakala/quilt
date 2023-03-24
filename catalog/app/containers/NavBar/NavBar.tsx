@@ -590,7 +590,7 @@ export function NavBar() {
       {cfg.disableNavigator || (cfg.alwaysRequiresAuth && isSignIn) ? (
         <div className={classes.spacer} />
       ) : (
-        <Controls {...{ bucket, disableSearch: cfg.mode === 'LOCAL' }} />
+        <Controls {...{ bucket, disableSearch: false }} />
       )}
 
       {!useHamburger && (
